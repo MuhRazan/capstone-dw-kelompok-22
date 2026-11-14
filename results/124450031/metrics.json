@@ -1,7 +1,9 @@
 {
   "metrik": {
-    "seri_panel": 0,
-    "rincian_dienkode": 0,
+    "seri_panel": 10,
+    "rincian_dienkode": 9,
+    "baris_silver": 4437,
+    "keputusan_dicatat": 12,
     "baris_gold": 0
   },
   "seed": 0,
