@@ -1,0 +1,27 @@
+# DAFTAR BERKAS (jalur | bait)
+wdi/2026-10-20/data/kelompok-01-hal-01.json | 1001878
+wdi/2026-10-20/metadata/sumber.json | 13048
+wdi/2026-10-20/metadata/sumber2_indikator.json | 1476197
+wdi/2026-10-20/metadata/sumber46_indikator.json | 382535
+
+# BENTUK TIAP JSON
+## wdi/2026-10-20/data/kelompok-01-hal-01.json
+  tipe: list
+  len=2
+  [0] dict (len=6) {'page': 1, 'pages': 1, 'per_page': 20000, 'total': 3960, 'sourceid': None, 'lastupdated': '2026-10-08'}
+  [1] list (len=3960) [{'indicator': {'id': 'AG.LND.FRST.K2', 'value': 'Forest area (sq. km)'}, 'country': {'id': 'ID', 'value': 'Indonesia'}, 'countryiso3code': 'IDN', 'date': '2025', 'value': 959693, 'unit': '', 'obs_status': '', 'decimal': 1}, {'indicator': {'id': 'AG.LND.FRST.K2', 'value': 'Forest area (sq. km)'}, 'country': {'id': 'ID', 'value': 'Indonesia'}, 'countryiso3code': 'IDN', 'date': '2024', 'value': 958878.2, 'unit': '', 'obs_status': '', 'decimal': 1},
+## wdi/2026-10-20/metadata/sumber.json
+  tipe: list
+  len=2
+  [0] dict (len=4) {'page': '1', 'pages': '1', 'per_page': '200', 'total': '71'}
+  [1] list (len=71) [{'id': '1', 'lastupdated': '2021-08-18', 'name': 'Doing Business', 'code': 'DBS', 'description': '', 'url': '', 'dataavailability': 'Y', 'metadataavailability': 'Y', 'concepts': '3'}, {'id': '2', 'lastupdated': '2026-10-08', 'name': 'World Development Indicators', 'code': 'WDI', 'description': '', 'url': '', 'dataavailability': 'Y', 'metadataavailability': 'Y', 'concepts': '3'}, {'id': '3', 'lastupdated': '2026-09-25', 'name': 'Worldwide Governa
+## wdi/2026-10-20/metadata/sumber2_indikator.json
+  tipe: list
+  len=2
+  [0] dict (len=4) {'page': 1, 'pages': 1, 'per_page': '5000', 'total': 1498}
+  [1] list (len=1498) [{'id': 'AG.CON.FERT.PT.ZS', 'name': 'Fertilizer consumption (% of fertilizer production)', 'unit': '', 'source': {'id': '2', 'value': 'World Development Indicators'}, 'sourceNote': "Fertilizer consumption measures the quantity of plant nutrients and is calculated as production plus imports minus exports. Fertilizer products cover nitrogenous, potash, and phosphate fertilizers (including ground rock phosphate). Traditional nutrients--animal and p
+## wdi/2026-10-20/metadata/sumber46_indikator.json
+  tipe: list
+  len=2
+  [0] dict (len=4) {'page': 1, 'pages': 1, 'per_page': '5000', 'total': 408}
+  [1] list (len=408) [{'id': 'AG.LND.FRST.K2', 'name': 'Forest area (sq. km)', 'unit': '', 'source': {'id': '46', 'value': 'Sustainable Development Goals '}, 'sourceNote': 'Forest area is land under natural or planted stands of trees of at least 5 meters in situ, whether productive or not, and excludes tree stands in agricultural production systems (for example, in fruit plantations and agroforestry systems) and trees in urban parks and gardens.', 'sourceOrganization
