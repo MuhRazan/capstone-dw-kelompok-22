@@ -1,15 +1,22 @@
-﻿"""Tahap 1 - Ekstraksi (pertemuan X). Milik tim.
+﻿"""Tahap 1 - Ekstraksi. Milik tim.
 
-Baca setiap berkas di data/raw/ (CSV, JSON WebAPI BPS, XLSX BNPB, SDMX ILO, JSON WDI) menjadi
-DataFrame mentah yang setia pada sumbernya: jangan membersihkan di sini, cukup ratakan struktur
-dan catat asal tiap baris (`_berkas_raw` relatif data/raw/, `_sha256_raw` dari src.common.manifest).
+Baca setiap berkas di data/raw/ menjadi DataFrame mentah yang setia pada sumbernya:
+jangan membersihkan di sini; catat asal tiap baris (_berkas_raw, _sha256_raw).
 """
-from . import bnpb_xlsx
+import pandas as pd
+
+from . import bnpb_json, bnpb_xlsx, wdi
 
 
 def jalankan():
     """Kembalikan {nama_sumber: DataFrame mentah}."""
+    hasil, galat = bnpb_json.baca_semua("data/raw/bnpb/2026-10-20")
+    if galat:
+        raise RuntimeError(f"pembaca JSON galat: {galat[:3]}")
+    w = list(wdi.baca_semua().values())
     return {
         "bnpb_xlsx": bnpb_xlsx.baca_semua(),
-        # rekan JSON/CKAN: tambahkan "bnpb_json": ... di sini
+        "bnpb_json": pd.concat(hasil.values(), ignore_index=True),
+        "wdi_data": w[0],
+        "wdi_metadata": pd.concat(w[1:], ignore_index=True),
     }
