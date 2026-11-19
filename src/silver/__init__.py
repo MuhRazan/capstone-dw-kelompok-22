@@ -11,27 +11,35 @@ import pandas as pd
 
 SILVER = Path("data/silver/silver.parquet")
 
-# indikator mentah -> (seri_kode, satuan). Sumber satuan: judul kolom/grup di XLSX dan
-# data/KASUS.md; kerusakan (unit) tidak dipakai karena milik kasus 23.
+# indikator mentah -> seri_kode. Satuan per seri ada di SATUAN (diverifikasi di
+# docs/katalog-seri.csv); kerusakan (unit) tidak dipakai karena milik kasus 23.
 SERI = {
-    "Jumlah Bencana 2025": ("kejadian", "kejadian"),
-    "Meninggal 2025": ("korban_meninggal", "jiwa"),
-    "Hilang 2025": ("korban_hilang", "jiwa"),
-    "Luka_Sakit 2025": ("korban_luka_sakit", "jiwa"),
-    "Terdampak 2025": ("korban_terdampak", "jiwa"),
-    "Mengungsi 2025": ("korban_mengungsi", "jiwa"),
-    "Mengungsi Per 100rb org 2025": ("korban_mengungsi_per_100rb", "per_100000_penduduk"),
-    "MD_Hilang Per 100rb org 2025": ("korban_meninggal_hilang_per_100rb", "per_100000_penduduk"),
-    "Jumlah Kejadian": ("kejadian", "kejadian"),
-    "Korban Meninggal": ("korban_meninggal", "jiwa"),
-    "Korban Hilang": ("korban_hilang", "jiwa"),
-    "Korban Luka-Luka": ("korban_luka_sakit", "jiwa"),
-    "Korban Terdampak - Mengungsi": ("korban_terdampak_mengungsi", "jiwa"),
-    "Meninggal": ("korban_meninggal", "jiwa"),
-    "Hilang": ("korban_hilang", "jiwa"),
-    "Luka": ("korban_luka_sakit", "jiwa"),
-    "Terdampak": ("korban_terdampak", "jiwa"),
-    "Mengungsi": ("korban_mengungsi", "jiwa"),
+    "Jumlah Bencana 2025": "kejadian",
+    "Meninggal 2025": "korban_meninggal",
+    "Hilang 2025": "korban_hilang",
+    "Luka_Sakit 2025": "korban_luka_sakit",
+    "Terdampak 2025": "korban_terdampak",
+    "Mengungsi 2025": "korban_mengungsi",
+    "Mengungsi Per 100rb org 2025": "korban_mengungsi_per_100rb",
+    "MD_Hilang Per 100rb org 2025": "korban_meninggal_hilang_per_100rb",
+    "Jumlah Kejadian": "kejadian",
+    "Korban Meninggal": "korban_meninggal",
+    "Korban Hilang": "korban_hilang",
+    "Korban Luka-Luka": "korban_luka_sakit",
+    "Korban Terdampak - Mengungsi": "korban_terdampak_mengungsi",
+    "Meninggal": "korban_meninggal",
+    "Hilang": "korban_hilang",
+    "Luka": "korban_luka_sakit",
+    "Terdampak": "korban_terdampak",
+    "Mengungsi": "korban_mengungsi",
+}
+
+# seri -> satuan (lihat docs/katalog-seri.csv; sisanya jiwa)
+SATUAN = {
+    "kejadian": "kejadian",
+    "korban_mengungsi_per_100rb": "per_100000_penduduk",
+    "korban_meninggal_hilang_per_100rb": "per_100000_penduduk",
+    "EN.CLC.MDAT.ZS": "persen_penduduk",
 }
 
 # ejaan jenis bencana tidak seragam antarberkas -> satu kode rincian
@@ -62,36 +70,114 @@ def _norm(nama) -> str:
     return re.sub(r"\s+", " ", str(nama).strip().upper())
 
 
+def _satuan(seri) -> str:
+    return SATUAN.get(seri, "jiwa")
+
+
 def _peta_wilayah(d: pd.DataFrame) -> dict:
     """{nama provinsi: kode BPS x100} dari baris yang punya kode wilayah."""
-    ada = d[d["Kode Wilayah Provinsi"].notna()]
+    if not {"Kode Wilayah Provinsi"} <= set(d.columns):
+        return {}
+    nama = next((c for c in ("Provinsi", "Nama Provinsi")
+                 if c in d.columns and d[c].notna().any()), None)
+    if nama is None:
+        return {}
+    ada = d[d["Kode Wilayah Provinsi"].notna() & d[nama].notna()]
     return {_norm(n): int(float(k)) * 100
-            for k, n in ada[["Kode Wilayah Provinsi", "Provinsi"]].drop_duplicates().itertuples(index=False)}
+            for k, n in ada[["Kode Wilayah Provinsi", nama]].drop_duplicates().itertuples(index=False)}
 
 
-def _kerangka(d: pd.DataFrame, peta: dict) -> pd.DataFrame:
-    d = d.copy()
-    d["_nama"] = d["Provinsi"].map(_norm)
-    kode = pd.to_numeric(d["Kode Wilayah Provinsi"], errors="coerce")
+def _wilayah(d: pd.DataFrame, peta: dict) -> None:
+    """Isi kolom _nama dan wilayah_kode in-place."""
+    nama = next((c for c in ("Provinsi", "Nama Provinsi")
+                 if c in d.columns and d[c].notna().any()), None)
+    if nama is None:
+        d["_nama"] = "INDONESIA"
+        d["_nasional"] = True
+    else:
+        # baris tanpa nama provinsi = baris total nasional
+        d["_nama"] = d[nama].map(_norm).where(d[nama].notna(), "INDONESIA")
+        d["_nasional"] = False
+    kode = pd.to_numeric(d.get("Kode Wilayah Provinsi"), errors="coerce")
     d["wilayah_kode"] = (kode * 100).astype("Int64")
-    d.loc[d["wilayah_kode"].isna() & d["_nama"].eq("INDONESIA"), "wilayah_kode"] = INDONESIA
-    d.loc[d["wilayah_kode"].isna() & d["format_asal"].eq("rekapitulasi_2025"), "wilayah_kode"] = INDONESIA
-    kurang = d["wilayah_kode"].isna()
-    d.loc[kurang, "wilayah_kode"] = d.loc[kurang, "_nama"].map(peta).astype("Int64")
-    d.loc[kurang, "wilayah_kode"] = d.loc[kurang, "_nama"].map(ALIAS).fillna(d.loc[kurang, "wilayah_kode"])
+    kosong = d["wilayah_kode"].isna()
+    d.loc[kosong, "wilayah_kode"] = d.loc[kosong, "_nama"].map({**peta, **ALIAS}).astype("Int64")
+    d.loc[d["_nama"].isin(["INDONESIA", "TOTAL"]), "wilayah_kode"] = INDONESIA
 
-    seri = d["indikator"].map(SERI)
-    d["seri_kode"] = seri.str[0]
-    d["satuan"] = seri.str[1]
+
+def _angka(s) -> pd.Series:
+    return pd.to_numeric(s, errors="coerce")
+
+
+def _dari_xlsx(d: pd.DataFrame, peta: dict) -> pd.DataFrame:
+    # baris kabupaten/kota tidak dipakai: rekap provinsi tahun yang sama sudah ada (K-006)
+    kab = d["_berkas_raw"].str.contains("kabupaten|kabupten", case=False, regex=True)
+    d = d[~kab].copy()
+    _wilayah(d, peta)
+    # berkas rekapitulasi 2025 hanya berisi baris total nasional
+    d["_nasional"] = d["format_asal"].eq("rekapitulasi_2025")
 
     bencana = d["jenis_bencana"].where(d["jenis_bencana"].notna(), d.get("Jenis Bencana"))
     d["rincian"] = bencana.map(lambda x: BENCANA.get(_norm(x), "total") if pd.notna(x) else "total")
+    d["seri_kode"] = d["indikator"].map(SERI)
+    d["nilai"] = _angka(d["nilai"])
+    d["periode"] = d["tahun"].astype("Int64").astype("string")
+    d["sumber"] = "bnpb_xlsx"
+    return d
 
-    d["nilai"] = pd.to_numeric(d["nilai"], errors="coerce")
-    d["periode"] = d["tahun"].astype(int).astype(str)
-    d["jenis_periode"] = "tahun"
-    d["nama_wilayah"] = d["_nama"]
-    d["sumber"] = "bnpb"
+
+def _json_satu(d: pd.DataFrame, peta: dict) -> pd.DataFrame:
+    """Satu berkas datastore: kabupaten/kota dilewati (K-006)."""
+    d = d.copy()
+    _wilayah(d, peta)
+    # berkas satu tahun: tidak ada kolom tahun, tahun diambil dari nama resource
+    if d["tahun"].isna().all():
+        d["tahun"] = d["resource_nama"].iloc[0][-4:]
+        d["tahun"] = _angka(d["tahun"]).astype("Int64")
+    d["seri_kode"] = d["seri"]
+    d["nilai"] = _angka(d["nilai"])
+    d["periode"] = d["tahun"].astype("Int64").astype("string")
+    d["sumber"] = "bnpb_json"
+    return d
+
+
+def _dari_json(d: pd.DataFrame, peta: dict) -> pd.DataFrame:
+    # satu berkas = satu tabel; kolom bencana hanya ada di berkas satu tahun
+    d = d[d["seri"].ne("ckan_metadata")]
+    bagian = []
+    for _, g in d.groupby("_berkas_raw", sort=False):
+        if g["tingkat"].iloc[0] == "kabupaten":
+            continue  # rekap provinsi sudah ada (K-006)
+        if str(g["resource_nama"].iloc[0]).lower().endswith(".xlsx"):
+            continue  # resource kembar, isi identik (K-014)
+        kol = [c for c in g.columns if _norm(c) in BENCANA and g[c].notna().any()]
+        if kol:
+            dasar = g.drop(columns="nilai")
+            g = dasar.melt(
+                id_vars=[c for c in dasar.columns if c not in kol],
+                value_vars=kol, var_name="_bencana", value_name="nilai")
+            g["rincian"] = g.pop("_bencana").map(lambda x: BENCANA[_norm(x)])
+        elif "JENIS BENCANA" in g.columns:
+            g["rincian"] = g["JENIS BENCANA"].map(lambda x: BENCANA.get(_norm(x), "total"))
+        else:
+            g["rincian"] = "total"
+        bagian.append(_json_satu(g, peta))
+    if not bagian:
+        return d.iloc[0:0]
+    return pd.concat(bagian, ignore_index=True)
+
+
+def _dari_wdi(d: pd.DataFrame) -> pd.DataFrame:
+    """Pembanding nasional WDI: satu baris per tahun, Indonesia."""
+    d = d[d["countryiso3code"].eq("IDN")].copy()
+    d["seri_kode"] = "EN.CLC.MDAT.ZS"
+    d["wilayah_kode"] = INDONESIA
+    d["_nama"] = "INDONESIA"
+    d["periode"] = d["date"].astype("Int64").astype("string")
+    d["rincian"] = "total"
+    d["nilai"] = _angka(d["value"])
+    d["sumber"] = "wdi"
+    d["_nasional"] = True
     return d
 
 
@@ -102,40 +188,68 @@ def _penduduk(d: pd.DataFrame) -> pd.DataFrame:
         return ada
     kanonik = ada["_berkas_raw"].iloc[0]
     p = ada[ada["_berkas_raw"] == kanonik].drop_duplicates(["wilayah_kode", "periode"])
-    p = p.assign(seri_kode="jumlah_penduduk", satuan="jiwa", rincian="total",
-                 nilai=pd.to_numeric(p["Jumlah Penduduk"], errors="coerce"))
+    p = p.assign(seri_kode="jumlah_penduduk", rincian="total",
+                 nilai=_angka(p["Jumlah Penduduk"]))
     return p
 
 
 def jalankan(mentah):
     """Terima keluaran tahap 1, tulis dan kembalikan DataFrame Silver."""
-    d = pd.concat(mentah.values(), ignore_index=True)
-    peta = _peta_wilayah(d)
+    xlsx = mentah.get("bnpb_xlsx")
+    js = mentah.get("bnpb_json")
+    wdi = mentah.get("wdi_data")
 
-    # baris kabupaten/kota tidak dipakai: rekap provinsi tahun yang sama sudah ada (K-006)
-    kab = d["_berkas_raw"].str.contains("kabupaten|kabupten", case=False, regex=True)
-    d = d[~kab]
-    d = _kerangka(d, peta)
+    peta = {}
+    for d in (xlsx, js):
+        if d is not None:
+            peta.update(_peta_wilayah(d))
+
+    bagian = []
+    if xlsx is not None:
+        x = _dari_xlsx(xlsx, peta)
+        bagian += [x, _penduduk(x)]
+    if js is not None:
+        bagian.append(_dari_json(js, peta))
+    if wdi is not None:
+        bagian.append(_dari_wdi(wdi))
+
+    d = pd.concat(bagian, ignore_index=True)
+    d["jenis_periode"] = "tahun"
+    d["satuan"] = d["seri_kode"].map(_satuan)
+    d["nama_wilayah"] = d["_nama"]
 
     belum = sorted(d.loc[d["wilayah_kode"].isna(), "_nama"].dropna().unique())
     if belum:
         raise ValueError(f"nama wilayah tidak terpetakan ke kode BPS: {belum}")
-    tanpa_seri = sorted(d.loc[d["seri_kode"].isna(), "indikator"].dropna().unique())
     d = d[d["seri_kode"].notna() & d["nilai"].notna()]
+    # tidak ada agregasi periode: seluruh baris berasal dari tabel tahunan (K-016)
+    if not d["periode"].str.fullmatch(r"\d{4}").all():
+        raise ValueError("periode bukan tahunan; jangan rata-ratakan semester/bulan ke tahun")
 
-    pend = _penduduk(d)
-    kolom = KOLOM + ["Jumlah Penduduk", "format_asal", "indikator"]
-    silver = pd.concat([d[kolom], pend[kolom]], ignore_index=True)[KOLOM]
-    silver = silver.drop_duplicates()
+    silver = d[KOLOM + ["_nasional"]].drop_duplicates()
+    kunci = ["sumber", "seri_kode", "wilayah_kode", "periode", "rincian"]
 
-    kembar = silver.duplicated(["sumber", "seri_kode", "wilayah_kode", "periode", "rincian", "_berkas_raw"])
+    # baris nasional per jenis bencana muncul di berkas provinsi dan di tabel nasional;
+    # tabel nasional yang dipakai. Nilainya identik, kecuali kejadian 2024 tanah longsor
+    # yang baris provinsinya (27) bertentangan dengan jumlah provinsi (207) = tabel nasional (K-015)
+    nas = silver["_nasional"].fillna(False).astype(bool)
+    sasaran = silver["wilayah_kode"].eq(INDONESIA) & silver["rincian"].ne("total")
+    ada_nas = {tuple(k) for k in silver.loc[sasaran & nas, kunci].itertuples(index=False, name=None)}
+    buang = sasaran & ~nas & silver[kunci].apply(lambda r: tuple(r) in ada_nas, axis=1)
+    silver = silver[~buang].drop(columns="_nasional")
+
+    kembar = silver.duplicated(kunci, keep=False)
     if kembar.any():
-        raise ValueError(f"{int(kembar.sum())} baris kembar pada kunci Silver")
+        bentrok = silver[kembar].groupby(kunci).nilai.nunique()
+        if (bentrok > 1).any():
+            contoh = [list(k) for k in bentrok[bentrok > 1].index[:3]]
+            raise ValueError(f"nilai berbeda untuk kunci Silver yang sama: {contoh}")
+        silver = silver.sort_values(kunci + ["_berkas_raw"]).drop_duplicates(kunci, keep="first")
 
     silver = silver.astype({"wilayah_kode": "int64", "periode": "string"})
     SILVER.parent.mkdir(parents=True, exist_ok=True)
     silver.to_parquet(SILVER, index=False)
     print(f"Silver: {len(silver):,} baris, {silver['seri_kode'].nunique()} seri, "
-          f"{silver['wilayah_kode'].nunique()} wilayah, {silver['_berkas_raw'].nunique()} berkas; "
-          f"kerusakan dilewati: {len(tanpa_seri)} indikator")
+          f"{silver['wilayah_kode'].nunique()} wilayah, {silver['_berkas_raw'].nunique()} berkas, "
+          f"periode {silver['periode'].min()}-{silver['periode'].max()}")
     return silver
