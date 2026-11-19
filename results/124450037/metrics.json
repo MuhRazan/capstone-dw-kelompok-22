@@ -1,0 +1,16 @@
+{
+  "metrik": {
+    "seri_diprofilkan": 10,
+    "baris_profil_per_seri": 10,
+    "baris_profil_per_provinsi": 340,
+    "outlier_ditandai": 1233,
+    "patahan_ditandai": 0,
+    "duplikat_ditandai": 0,
+    "revisi_ditandai": 0,
+    "temuan_galat_input": 2,
+    "gambar_dihasilkan": 30
+  },
+  "seed": 0,
+  "data_hash": "f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f",
+  "perangkat": "Windows AMD64 Python 3.13.7"
+}
