@@ -1,7 +1,9 @@
 # Verifikasi katalog seri (kartu #10)
 
 Perintah: `python -m src.validasi.katalog`
-Keluaran: 11 seri, 24 keputusan, 0 masalah.
+Keluaran: 11 seri, 33 keputusan, 0 masalah.
+
+ID log unik: 33 baris, tanpa ID ganda. Duplikat K-024..K-027 hasil merge lintas anggota dibersihkan, sehingga tiap koreksi punya satu entri.
 
 ## Tautan metadata per seri
 

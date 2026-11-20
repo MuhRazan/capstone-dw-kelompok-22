@@ -31,6 +31,8 @@ def main():
         for k in set(re.findall(r"K-\d{3}", r.get("catatan", ""))):
             if k not in log:
                 salah.append(f"{seri}: {k} disebut di katalog tapi tidak ada di log-keputusan.csv")
+        if "oreksi" in r.get("catatan", "") and not re.search(r"K-\d{3}", r.get("catatan", "")):
+            salah.append(f"{seri}: catatan menyebut koreksi tanpa rujukan K-xxx")
 
     for jenis, seri in RERATA.items():
         baris = [r for r in katalog if r["seri_kode"] == seri]
