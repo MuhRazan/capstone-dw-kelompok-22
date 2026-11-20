@@ -26,6 +26,8 @@ Kode SDG 13.1.1 / 1.5.1 / 11.5.1 menaut ke metadata UNSD:
 [1.5.1](https://unstats.un.org/sdgs/metadata/files/Metadata-01-05-01.pdf),
 [11.5.1](https://unstats.un.org/sdgs/metadata/files/Metadata-11-05-01.pdf).
 
+Cek jangkauan: tautan WDI dan UNSD membalas 200. `data.bnpb.go.id` memakai Cloudflare dan membalas 403 ke klien non-browser; URL BNPB diambil apa adanya dari field `url` pada `data/raw/bnpb/2026-10-20/ckan/package_search-pusdatinkom-01.json`, jadi tetap sah dibuka lewat browser.
+
 ## Koreksi katalog yang tercatat
 
 | Log | Seri | Koreksi |
