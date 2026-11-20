@@ -16,7 +16,7 @@ jumlah baris terdampak, keputusan, dan alternatif yang ditolak. Rujuk id di `log
 
 ## Integrasi dan rekonsiliasi
 Seri utama vs pembanding nasional: selisih, penjelasannya (definisi, metode, vintage, granularitas),
-dan hasil analisis revisi dari arsip WDI. Lihat dokumen lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di `reports/tabel_nasional_periode_seri.csv`.
+dan hasil analisis revisi dari arsip WDI. Lihat dokumen lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di `reports/tabel_nasional_periode_seri.csv`. Rancangan basis data SQL Silver terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
 
 ## Validasi dan reproduksibilitas
 Skema validasi (aturan, hasil lolos/gagal), waktu `python pipeline.py` dari nol, perbandingan pandas
