@@ -30,10 +30,10 @@ Kode SDG 13.1.1 / 1.5.1 / 11.5.1 menaut ke metadata UNSD:
 |---|---|---|
 | K-017 | semua | Satuan diverifikasi ke berkas mentah; katalog awal benar untuk 10 seri BNPB |
 | K-018 | EN.CLC.MDAT.ZS | Satuan dikoreksi jadi `persen_penduduk` |
-| K-021 | korban_terdampak | Katalog awal salah menunjuk `Korban Terdampak - Mengungsi`; itu milik `korban_terdampak_mengungsi` |
-| K-022 | jumlah_penduduk | Placeholder `{REKAP}` diganti berkas kanonik `31a0d329-...` |
-| K-023 | EN.CLC.MDAT.ZS | Periode ditandai `rerata_1990_2009`, bukan tahun 2009 tunggal |
-| K-024 | semua | `sumber_sdg` tidak lagi hanya `data/KASUS.md`; tiap seri punya URL metadata |
+| K-028 | korban_terdampak | Katalog awal salah menunjuk `Korban Terdampak - Mengungsi`; itu milik `korban_terdampak_mengungsi` |
+| K-029 | jumlah_penduduk | Placeholder `{REKAP}` diganti berkas kanonik `31a0d329-...` |
+| K-030 | EN.CLC.MDAT.ZS | Periode ditandai `rerata_1990_2009`, bukan tahun 2009 tunggal |
+| K-031 | semua | `sumber_sdg` tidak lagi hanya `data/KASUS.md`; tiap seri punya URL metadata |
 
 ## Pemeriksaan periode
 

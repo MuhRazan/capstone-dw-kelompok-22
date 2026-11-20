@@ -40,6 +40,7 @@ def bongkar(z, ke_raw, lain=None):
             tujuan = lain[rel]
         else:
             continue
+        tujuan = Path("\\\\?\\" + str(tujuan.resolve())) if sys.platform == "win32" else tujuan
         tujuan.parent.mkdir(parents=True, exist_ok=True)
         with z.open(info) as sumber, open(tujuan, "wb") as f:
             shutil.copyfileobj(sumber, f)
