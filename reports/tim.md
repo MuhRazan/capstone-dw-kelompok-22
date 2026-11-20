@@ -72,12 +72,8 @@ Distribusi nilai pada data korban bencana sangat menceng (*heavily right-skewed*
 - **Keterlacakan URL Metadata:** Sebanyak 11 seri di `docs/katalog-seri.csv` telah dilengkapi tautan resmi langsung ke CKAN BNPB, API WDI, serta pedoman metadata global PBB/UNSD untuk target SDG 1.5.1, 11.5.1, dan 13.1.1 (K-031).
 
 ## Integrasi dan rekonsiliasi
-
-Tahap rekonsiliasi awal (Sprint 1) mempersiapkan pasangan perbandingan seri utama terhadap referensi nasional:
-1. **Rasio Korban per 100.000 Penduduk:** Angka rasio terbitan BNPB 2025 diuji terhadap hasil kalkulasi ulang kelompok ($\frac{\text{korban}}{\text{jumlah\_penduduk}} \times 100.000$). Selisih bernilai 0 di seluruh sel valid, membuktikan bahwa angka publikasi merupakan turunan deterministik dari tabel jumlah penduduk.
-2. **Jumlahan Kabupaten/Kota vs Rekapitulasi Provinsi:** Menghasilkan 21 selisih pada indikator kejadian bencana (terekam di `reports/validasi-agregasi-kabupaten.csv`). Selisih ini sah dan dijelaskan oleh kaidah pencatatan BNPB (kejadian bencana yang melintasi beberapa kabupaten dicatat di tiap kabupaten terkait, namun hanya dihitung satu kali di tingkat provinsi).
-3. **Agregat Provinsi vs Baris Nasional:** Sebanyak 157 pasangan aditif dibandingkan (R14); selisih teridentifikasi pada gempabumi (1–4 kejadian) dan jumlah penduduk (-200 jiwa pada total 284,4 juta penduduk), yang tercatat di `reports/validasi-agregat-nasional.csv`.
-4. **Konteks Nasional WDI:** Seri `EN.CLC.MDAT.ZS` (0,16% penduduk terdampak) bertindak sebagai jangkar pembanding makro periode historis.
+Seri utama vs pembanding nasional: selisih, penjelasannya (definisi, metode, vintage, granularitas),
+dan hasil analisis revisi dari arsip WDI. Lihat dokumen lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di `reports/tabel_nasional_periode_seri.csv`. Rancangan basis data SQL Silver terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
 
 ## Validasi dan reproduksibilitas
 
@@ -90,9 +86,9 @@ Validasi otomatis dijalankan melalui modul `src/validasi/` dan terintegrasi penu
 
 | Anggota | NIM | Komponen | Tugas Sampingan | Bagian Laporan yang Ditulis |
 |---|---|---|---|---|
-| Muhammad Razan Maulana Pratama | 124450031 | Transformasi dan panel | Koordinator | Ringkasan, Struktur Repositori, Desain Transformasi |
-| Cika Adelia Br Marbun | 124450107 | Ekstraksi dan lineage (XLSX tangan) | Penjaga Data & Evaluasi (XLSX) | Data dan Lineage (Ekstraksi XLSX) |
-| Muhammad Harvinsyah | 124450128 | Ekstraksi dan lineage (JSON DataStore + CKAN) | Penjaga Data & Evaluasi (JSON) | Data dan Lineage (Ekstraksi JSON & CKAN) |
-| Charrlindah | 124450037 | Profil dan pembersihan | Analis Utama | Masalah data dan penanganannya |
-| Muhammad Rafka Fatih Al Ghathfaan | 124450089 | Integrasi, penyimpanan, dan skala | Integrator | Integrasi dan rekonsiliasi |
-| Nazlah Auliya | 124450054 | Validasi dan dokumentasi | Reproduksi & Demo | Validasi dan reproduksibilitas |
+| Muhammad Razan Maulana Pratama | 124450031 | Transformasi dan panel | Koordinator | Ringkasan, Struktur Silver |
+| Charrlindah | 124450037 | Profil dan pembersihan | Profiling | Masalah data dan penanganannya |
+| Nazlah Auliya | 124450054 | Validasi dan dokumentasi | Quality Assurance | Validasi dan reproduksibilitas |
+| Muhammad Rafka Fatih A | 124450089 | Integrasi, penyimpanan, dan skala | Integrator | Integrasi dan rekonsiliasi |
+| Muhammad Harvinsyah | 124450107 | Ekstraksi dan lineage | Data Engineer | Data dan lineage |
+| Cika Adelia Br Marbun | 124450128 | Ekstraksi format | Data Engineer | Ekstraksi WDI dan pembaca berkas |
