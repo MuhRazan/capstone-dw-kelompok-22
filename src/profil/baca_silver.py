@@ -1,26 +1,43 @@
-﻿"""Loader Silver untuk profil BNPB. Tidak mengubah nilai."""
+﻿"""Loader Silver untuk profil. Tidak mengubah nilai apa pun.
+
+`baca_bnpb()` mengembalikan 10 seri BNPB; `baca_wdi()` mengembalikan satu baris
+pembanding nasional EN.CLC.MDAT.ZS; `baca_semua()` mengembalikan keduanya.
+"""
 import pandas as pd
 
-SERI_BNPB = [
-    "kejadian", "korban_meninggal", "korban_hilang", "korban_luka_sakit",
-    "korban_mengungsi", "korban_terdampak", "korban_terdampak_mengungsi",
-    "korban_mengungsi_per_100rb", "korban_meninggal_hilang_per_100rb",
-    "jumlah_penduduk",
-]
-KOLOM_WAJIB = ["sumber","seri_kode","wilayah_kode","nama_wilayah","periode",
-               "jenis_periode","rincian","nilai","satuan","_berkas_raw","_sha256_raw"]
+from src.profil.konstanta import SERI_BNPB
 
-def baca_silver(path="data/silver/silver.parquet"):
+KOLOM_WAJIB = [
+    "sumber", "seri_kode", "wilayah_kode", "nama_wilayah", "periode",
+    "jenis_periode", "rincian", "nilai", "satuan", "_berkas_raw", "_sha256_raw",
+]
+
+
+def baca_semua(path="data/silver/silver.parquet"):
     df = pd.read_parquet(path)
     hilang = [k for k in KOLOM_WAJIB if k not in df.columns]
     if hilang:
         raise ValueError(f"Kolom wajib hilang: {hilang}")
-    
-    # Menangkap 'bnpb', 'bnpb_xlsx', 'bnpb_datastore', dll.
-    df = df[df["sumber"].astype(str).str.lower().str.contains("bnpb")].copy()
-    
-    # Filter 10 seri
-    df = df[df["seri_kode"].isin(SERI_BNPB)].copy()
+    df = df.copy()
     df["nilai"] = pd.to_numeric(df["nilai"], errors="coerce")
-    df = df.dropna(subset=["nilai"])
+    df["periode"] = df["periode"].astype("string")
+    df["wilayah_kode"] = pd.to_numeric(df["wilayah_kode"], errors="raise").astype("int64")
     return df
+
+
+def baca_bnpb(path="data/silver/silver.parquet"):
+    df = baca_semua(path)
+    b = df[df["sumber"].astype(str).str.lower().str.contains("bnpb")].copy()
+    b = b[b["seri_kode"].isin(SERI_BNPB)].copy()
+    return b.dropna(subset=["nilai"])
+
+
+def baca_wdi(path="data/silver/silver.parquet"):
+    df = baca_semua(path)
+    w = df[df["sumber"].astype(str).str.lower().eq("wdi")].copy()
+    return w.dropna(subset=["nilai"])
+
+
+# nama lama dipertahankan agar pemanggil Tahap 2 sebelumnya tetap berjalan
+def baca_silver(path="data/silver/silver.parquet"):
+    return baca_bnpb(path)
