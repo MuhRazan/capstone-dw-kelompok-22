@@ -1,8 +1,7 @@
 {
   "metrik": {
-    "tabel_sql": 1,
-    "baris_terintegrasi": 0,
-    "berkas_dibaca": 44
+    "pasangan_rekonsiliasi": 3,
+    "periode_beririsan": 0
   },
   "seed": 0,
   "data_hash": "f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f",
