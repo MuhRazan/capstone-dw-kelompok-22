@@ -61,3 +61,21 @@ def baca_semua():
     for p in sorted((AKAR / "metadata").glob("*.json")):
         hasil[p] = baca_metadata(p)
     return hasil
+
+
+def main():
+    print("| berkas | jenis | baris | baris_mentah | sha256 |")
+    print("|---|---|---|---|---|")
+    total = 0
+    for p, df in baca_semua().items():
+        rel = p.relative_to(RAW).as_posix()
+        jenis = "data" if p.parent.name == "data" else "metadata"
+        sha = df["_sha256_raw"].iloc[0] if len(df) else "-"
+        total += len(df)
+        print(f"| {rel} | {jenis} | {len(df)} | {df.attrs.get('baris_mentah_berkas')} | {sha[:12]} |")
+    print(f"\nTotal baris: {total}")
+    raise SystemExit(0 if total else 1)
+
+
+if __name__ == "__main__":
+    main()
