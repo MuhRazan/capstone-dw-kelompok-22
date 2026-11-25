@@ -1,17 +1,20 @@
-# Validasi Silver — Kasus 22 Korban Bencana
+# Validasi Silver dan Gold — Kasus 22 Korban Bencana
 
 Dijalankan oleh `python pipeline.py` pada tahap `validasi` (tahap 8).
 
 | Ringkasan | Nilai |
 |---|---|
 | Baris Silver | 7,535 |
-| Seri | 11 |
-| Wilayah | 39 |
+| Seri Silver | 11 |
+| Wilayah Silver | 39 |
 | Berkas sumber | 24 |
 | Periode | 2009–2025 |
+| Baris Panel Gold | 3,382 |
+| Baris Nasional Gold | 90 |
+| Baris Rekonsiliasi | 136 |
 | Sidik data mentah (`data_hash`) | `f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f` |
-| Aturan validasi | 14 |
-| Lolos | 14 |
+| Aturan validasi | 24 |
+| Lolos | 24 |
 | Gagal | 0 |
 
 Definisi status:
@@ -36,6 +39,16 @@ Definisi status:
 | R12 | Kelengkapan wilayah per seri/periode | LOLOS_DENGAN_CATATAN | 1,692 | 134 grup lengkap 38 provinsi; 88 grup parsial dicatat (hanya provinsi yang punya kejadian) |
 | R13 | Agregat kabupaten/kota ke provinsi | LOLOS_DENGAN_CATATAN | 21 | 1,530 baris agregasi kab/kota; 21 selisih dicatat; 76 baris total provinsi tanpa rincian kab/kota |
 | R14 | Agregat provinsi ke nasional | LOLOS_DENGAN_CATATAN | 5 | 157 pasangan aditif dibandingkan; 5 selisih dicatat; 3 seri rasio/persen tidak dijumlahkan |
+| R15 | gold: kunci panel unik | LOLOS | 0 | indikator + wilayah_kode + periode tidak kembar (terpenuhi, 0 pelanggaran) |
+| R16 | gold: satu satuan per indikator | LOLOS | 0 | satu indikator panel hanya punya satu satuan (terpenuhi, 0 pelanggaran) |
+| R17 | gold: status sel dan nilai | LOLOS | 0 | status sel baku; nilai ada jika dan hanya jika sel terisi (terpenuhi, 0 pelanggaran) |
+| R18 | gold: sel tertelusur ke Silver | LOLOS | 0 | setiap sel terisi punya baris Silver asal (seri, wilayah, periode, berkas) (terpenuhi, 0 pelanggaran) |
+| R19 | gold: nilai sama dengan Silver | LOLOS | 0 | nilai panel = nilai Silver asalnya (tidak ada nilai yang diubah di Gold) (terpenuhi, 0 pelanggaran) |
+| R20 | gold: tabel nasional unik | LOLOS | 0 | seri + rincian + periode tidak kembar (terpenuhi, 0 pelanggaran) |
+| R21 | rekonsiliasi: kategori baku | LOLOS | 0 | kategori dari daftar baku; penjelasan tidak kosong (terpenuhi, 0 pelanggaran) |
+| R22 | rekonsiliasi: selisih = utama − pembanding | LOLOS | 0 | selisih dihitung ulang dan cocok (terpenuhi, 0 pelanggaran) |
+| R23 | rekonsiliasi: baris berpasangan dihitung | LOLOS | 0 | pasangan selisih dengan dua nilai punya selisih, atau catatan mengapa tidak (terpenuhi, 0 pelanggaran) |
+| R24 | rekonsiliasi: periode utama tidak dibuang | LOLOS | 0 | setiap tahun seri utama di tabel nasional muncul di rekonsiliasi (terpenuhi, 0 pelanggaran) |
 
 ## Catatan dan selisih
 
