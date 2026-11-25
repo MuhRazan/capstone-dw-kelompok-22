@@ -1,4 +1,4 @@
--- DDL Skema Basis Data Relasional SQL (Tahap 5 — Kasus 22: Korban Bencana)
+-- DDL Skema Basis Data Relasional SQL (Tahap 5 & 6 — Kasus 22: Korban Bencana)
 -- Komponen: Integrasi, Penyimpanan, dan Skala (124450089)
 -- Kompatibel dengan: SQLite, DuckDB, dan PostgreSQL
 
@@ -79,10 +79,13 @@ CREATE TABLE IF NOT EXISTS tabel_rekonsiliasi (
     periode TEXT NOT NULL,
     seri_kode TEXT NOT NULL,
     rincian TEXT NOT NULL,
+    nilai_seri_utama REAL,
     nilai_utama REAL,
     nilai_pembanding REAL,
     selisih REAL,
     satuan TEXT NOT NULL,
+    kategori_penjelasan TEXT NOT NULL,
+    kategori TEXT NOT NULL,
     status TEXT NOT NULL,
     catatan TEXT,
     PRIMARY KEY (pasangan_id, wilayah_kode, periode, seri_kode, rincian)
