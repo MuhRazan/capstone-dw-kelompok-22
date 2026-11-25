@@ -9,7 +9,9 @@
     "temuan_galat_input": 2,
     "galat_diperbaiki": 2,
     "gambar_dihasilkan": 30,
-    "profil_pembanding": 1
+    "profil_pembanding": 1,
+    "aturan_validasi": 24,
+    "aturan_lolos": 24
   },
   "seed": 0,
   "data_hash": "f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f",

@@ -1,7 +1,7 @@
 {
   "metrik": {
-    "aturan_validasi": 14,
-    "aturan_lolos": 14,
+    "aturan_validasi": 24,
+    "aturan_lolos": 24,
     "kolom_terdokumentasi": 11
   },
   "seed": 0,
