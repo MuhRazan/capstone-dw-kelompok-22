@@ -3,24 +3,21 @@
 Keluaran:
 - data/gold/panel.parquet (panel panjang provinsi x periode x indikator)
 - data/gold/panel_lebar.parquet (panel lebar untuk analisis)
-- data/gold/nasional.parquet (tabel nasional Gold)
-- data/gold/rekonsiliasi.parquet (tabel rekonsiliasi seri utama vs pembanding)
-- data/gold/tabel_nasional_periode_seri.parquet (tabel agregat nasional periode x seri)
-- data/gold/gold.sqlite (penyimpanan relasional SQL)
+- data/gold/tabel_nasional.parquet & tabel_nasional_periode_seri.parquet (tabel agregat nasional)
+- data/gold/tabel_rekonsiliasi.parquet (tabel rekonsiliasi 3 pasangan)
+- data/gold/gold.sqlite & data/silver/silver.db (penyimpanan relasional SQL)
 """
 from src.gold import panel
 from src.gold import tabel_nasional
-from src.gold import muat_sql
-from src.gold import nasional_gold
 from src.gold import rekonsiliasi
+from src.gold import muat_sql
 
 
 def jalankan(silver):
     """Terima Silver, bangun tabel Gold, dan kembalikan kamus hasil."""
     hasil = {}
     hasil["panel"] = panel.jalankan(silver)
-    hasil["nasional"] = nasional_gold.jalankan(silver)
-    hasil["rekonsiliasi"] = rekonsiliasi.jalankan(hasil["nasional"])
-    hasil["baris_sql"] = muat_sql.muat_silver_ke_sqlite()
-    tabel_nasional.buat_tabel_nasional()
+    hasil["nasional"] = tabel_nasional.buat_tabel_nasional(silver)
+    hasil["rekonsiliasi"] = rekonsiliasi.buat_tabel_rekonsiliasi(silver)
+    hasil["baris_sql"] = muat_sql.muat_semua_ke_sqlite()
     return hasil

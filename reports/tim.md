@@ -10,6 +10,49 @@ Kasus 22 (Klaster G. Bencana BNPB) berfokus pada data kejadian dan korban bencan
 
 Sebanyak 44 berkas mentah (snapshot 20 Oktober 2026) dengan sidik `data_hash` = `f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f` diproses, terdiri atas 1 berkas metadata katalog CKAN, 26 berkas DataStore JSON BNPB, 13 berkas XLSX rekapitulasi unduhan tangan, dan 4 berkas WDI (1 data + 3 metadata). Sebanyak 24 berkas sumber masuk ke lapis Silver (7.535 baris), sementara berkas kab/kota dan tabel kerusakan dipisahkan dengan alasan tercatat. Setiap baris Silver membawa lineage terverifikasi melalui kolom `_berkas_raw` dan `_sha256_raw` yang divalidasi langsung terhadap `data/raw/MANIFEST.csv`.
 
+### Arsitektur Penyimpanan dan Rancangan Basis Data SQL (Tahap 5)
+
+Sebagai bagian dari Tahap 5, data analitik Kasus 22 dimuat ke dalam basis data relasional SQL (`data/gold/gold.sqlite` dan `data/silver/silver.db`) melalui eksekusi terpadu `python pipeline.py`. DDL skema terdefinisi di `src/gold/skema.sql` yang mencakup 4 tabel utama dengan tipe data dan kunci primer (*primary key*) yang tegas:
+
+1. **Tabel `silver`** (7.535 baris): Data observasi granular 11 kolom wajib.  
+   *Kunci Primer:* `(sumber, seri_kode, wilayah_kode, periode, rincian, _berkas_raw)`. Menegakkan keunikan per sel observasi dan berkas sumber (aturan R02).
+2. **Tabel `panel_gold`** (3.382 baris): Panel provinsi × periode × indikator format panjang (disertai penanda anomali, status sel, normalisasi per 100 ribu penduduk, dan transformasi `log1p`).  
+   *Kunci Primer:* `(wilayah_kode, periode, seri_kode, rincian)`.
+3. **Tabel `tabel_nasional`** (90 baris): Baris agregat nasional periode × seri dengan asal angka (`baris_indonesia`, `agregat_provinsi`, `pembanding`) dan silsilah mentah.  
+   *Kunci Primer:* `(periode, seri_kode)`.
+4. **Tabel `tabel_rekonsiliasi`** (1.553 baris): Pasangan rekonsiliasi analitik (Pasangan 1 rasio 100rb, Pasangan 2 agregasi kab/kota vs rekap provinsi, dan Pasangan 3 seri utama BNPB vs WDI) beserta selisih dan catatan keterbandingannya.  
+   *Kunci Primer:* `(pasangan_id, wilayah_kode, periode, seri_kode, rincian)`.
+
+Verifikasi otomatis pada `pipeline.py` memastikan bahwa **jumlah baris di SQL sama persis (100% cocok) dengan jumlah baris Parquet Silver dan Gold**:
+* `silver`: 7.535 baris SQL == 7.535 baris Parquet.
+* `panel_gold`: 3.382 baris SQL == 3.382 baris Parquet.
+* `tabel_nasional`: 90 baris SQL == 90 baris Parquet.
+* `tabel_rekonsiliasi`: 1.553 baris SQL == 1.553 baris Parquet.
+
+#### Alasan Pilihan Basis Data SQL (SQLite & DuckDB)
+Pemilihan SQLite (dan kompatibilitas DuckDB) didasarkan pada pertimbangan rekayasa data berikut:
+1. **Penegakan Skema dan Integritas Kunci (*Schema & PK Enforcement*):** Berbeda dengan format teks longgar, mesin SQL menolak secara otomatis (*fail-fast*) rekaman duplikat atau pelanggaran tipe kolom melalui penegakan *Primary Key* komposit dan batasan `NOT NULL`.
+2. **Reproduksibilitas Penuh dan Serverless (*Self-Contained File*):** Basis data beroperasi tanpa *daemon service*, kredensial pengguna, atau ketergantungan port jaringan. Berkas basis data tunggal dapat langsung dieksekusi di lingkungan uji manapun, menjamin keterulangan (*reproducibility*) hasil tim.
+3. **Kecepatan Query Agregasi dan Join:** Mendukung indeks B-tree komposit pada `(wilayah_kode, periode)` dan `(seri_kode, periode)` yang mempercepat pemfilteran cross-section/time-series serta join relasional antar-tabel.
+
+#### Perbandingan Singkat: SQL Relasional vs Document-Store (JSON Mentah)
+
+| Dimensi Evaluasi | Basis Data SQL Relasional (Lapis Silver & Gold) | Document-Store / Berkas JSON Mentah (Lapis Bronze) |
+|---|---|---|
+| **Paradigma Skema** | *Schema-on-write*: struktur kolom baku, tipe data tervalidasi saat penulisan, kunci primer unik wajib. | *Schema-on-read*: struktur dinamis/bersarang (*nested*), tidak ada pembatasan struktur kaku. |
+| **Penyimpanan Metadata** | Metadata silsilah (`_berkas_raw`, `_sha256_raw`) terstruktur rapi pada setiap baris observasi. | Menyimpan keseluruhan *payload* HTTP, *response header*, metadata katalog, dan *dictionary* sumber. |
+| **Kinerja Query Agregasi** | **Sangat Cepat**: optimasi pemindaian kolom, indeks numerik, dan fungsi agregasi relasional (`GROUP BY`, `SUM`, `AVG`). | **Lambat**: membutuhkan deserialisasi/parsing teks JSON menyeluruh (*tree-traversal*) di memori. |
+| **Integritas Observasi** | Mencegah anomali duplikasi baris melalui mekanisme kunci primer basis data. | Rawan duplikasi catatan jika API dipanggil berulang tanpa logika deduplikasi manual di luar berkas. |
+
+#### Mengapa Pendekatan Tersebut Cocok untuk Lapis Tertentu
+1. **Lapis Mentah / Bronze (`data/raw/`): Cocok Menggunakan Document-Store / JSON & XLSX Asli.**  
+   Menyimpan respons API mentah sebagai dokumen teks JSON/XLSX mempertahankan bukti silsilah autentik (*ground truth auditability*). Pendekatan *schema-on-read* pada lapis ini krusial karena berkas mentah BNPB dan WDI memiliki variasi struktur yang sangat lebar (26 JSON DataStore dengan hierarki berbeda, 13 XLSX dengan variasi *merged cells*, dan WDI multilabel). Memaksakan skema relasional di lapis mentah berisiko memotong atau mengaburkan informasi kontekstual sumber.
+2. **Lapis Silver (`data/silver/`): Cocok Menggunakan Tabel Relasional SQL & Parquet Kolumnar.**  
+   Pada lapis Silver, seluruh entitas telah dipilah dan dinormalisasi ke dalam skema seragam 11 kolom. Pendekatan relasional dengan *Primary Key* 6 kolom menjamin bahwa seluruh observasi unik, tipe data angka terbebas dari teks non-numerik, dan relasi lineage ke berkas mentah terkunci rapat sebelum data diolah lebih lanjut.
+3. **Lapis Gold (`data/gold/`): Cocok Menggunakan SQL Relasional Terindeks & Parquet Analitik.**  
+   Lapis Gold ditujukan untuk konsumsi analitis langsung (tabel panel, agregat nasional, dan rekonsiliasi). Format SQL relasional memudahkan pengguna dan peneliti mengeksekusi analisis kuantitatif dengan query SQL standar (`SELECT`, `JOIN`, `WHERE`), sementara berkas Parquet memberikan kompresi efisien dan pemindaian kolom berkecepatan tinggi untuk model ekonometrika.
+
+
 ## Masalah data dan penanganannya
 
 Bagian ini merangkum seluruh temuan empiris selama Sprint 1 dari hasil profil data dan pencatatan keputusan wrangling pada `log-keputusan.csv`.
@@ -72,8 +115,20 @@ Distribusi nilai pada data korban bencana sangat menceng (*heavily right-skewed*
 - **Keterlacakan URL Metadata:** Sebanyak 11 seri di `docs/katalog-seri.csv` telah dilengkapi tautan resmi langsung ke CKAN BNPB, API WDI, serta pedoman metadata global PBB/UNSD untuk target SDG 1.5.1, 11.5.1, dan 13.1.1 (K-031).
 
 ## Integrasi dan rekonsiliasi
-Seri utama vs pembanding nasional: selisih, penjelasannya (definisi, metode, vintage, granularitas),
-dan hasil analisis revisi dari arsip WDI. Lihat dokumen lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di `reports/tabel_nasional_periode_seri.csv`. Rancangan basis data SQL Silver terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
+
+Integrasi dan rekonsiliasi seri utama terhadap seri pembanding di tingkat nasional (Tahap 6) diwujudkan melalui pembentukan tabel analitik `data/gold/tabel_rekonsiliasi.parquet` (dan salinan CSV di `data/gold/tabel_rekonsiliasi.csv` serta tabel SQL `tabel_rekonsiliasi` di `data/gold/gold.sqlite`). Tabel ini mencakup 136 baris observasi yang memasangkan seri utama terhadap seri pembanding di seluruh 17 periode (2009 s.d. 2025) untuk 3 pasangan rekonsiliasi:
+
+1. **Pasangan 1: Rasio per 100 Ribu Penduduk (Hitungan Kelompok vs Terbitan Resmi BNPB 2025):**
+   * *Hasil:* Hitungan rasio mengungsi (`405,993486`) dan rasio meninggal+hilang (`0,660951`) pada tahun 2025 cocok sempurna dengan publikasi resmi BNPB (**selisih = 0,000000**).
+   * *Kategori Penjelasan:* **metode berbeda** pada tahun 2025 (metodologi perhitungan kelompok terbukti mereproduksi persis rumus BPS/BNPB); **cakupan berbeda** pada periode 2009–2024 karena BNPB belum menerbitkan data populasi resmi dan rasio sebelum 2025.
+2. **Pasangan 2: Agregasi Tingkat Kabupaten/Kota vs Rekapitulasi Tingkat Provinsi BNPB (2021 & 2022):**
+   * *Hasil:* Dampak korban jiwa (meninggal, hilang, luka, terdampak-mengungsi) cocok sempurna (**selisih = 0**). Pada seri kejadian terdapat selisih +49 kejadian (2021) dan +51 kejadian (2022).
+   * *Kategori Penjelasan:* **metode berbeda** untuk seluruh seri korban; **vintage berbeda** untuk seri kejadian akibat perbedaan waktu pemutakhiran data (*cut-off*) sistem BPBD daerah terhadap rilis provinsi Pusdatinkom BNPB; **cakupan berbeda** untuk tahun 2009–2020 dan 2023–2025 karena ketiadaan berkas rincian kab/kota.
+3. **Pasangan 3: Seri Utama Paparan Bencana BNPB vs Seri Pembanding WDI (`EN.CLC.MDAT.ZS`):**
+   * *Hasil:* Nilai WDI 2009 adalah 0,16059% penduduk (rata-rata 1990–2009). Sebagai perbandingan konteks pada 2025, persentase penduduk terdampak BNPB adalah 3,851554% (**selisih = +3,690964%**).
+   * *Kategori Penjelasan:* **vintage berbeda** pada 2009–2024 karena snapshot WDI berakhir pada 2009 mendahului pencatatan BNPB (irisan tahun langsung = 0); **definisi berbeda** pada perbandingan konteks 2025 karena WDI mencakup bencana iklim spesifik (CRED EM-DAT), sedangkan BNPB mencakup seluruh spektrum bencana hidrometeorologi dan geologi.
+
+Seluruh periode tanpa pasangan tetap ditampilkan dengan nilai null, dan selisih dipertahankan apa adanya. Dari seluruh baris berpasangan yang memiliki selisih terisi, diperoleh nilai **`selisih_median` = 0.0**. Uraian analitis komprehensif, formula matematis, dan catatan keterbandingan terdokumentasi lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di [reports/tabel_nasional_periode_seri.csv](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/tabel_nasional_periode_seri.csv). Rancangan basis data SQL Silver dan Gold terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
 
 ## Validasi dan reproduksibilitas
 

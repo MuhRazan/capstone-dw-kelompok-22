@@ -10,8 +10,8 @@ Dijalankan oleh `python pipeline.py` pada tahap `validasi` (tahap 8).
 | Berkas sumber | 24 |
 | Periode | 2009–2025 |
 | Baris Panel Gold | 3,382 |
-| Baris Nasional Gold | 8 |
-| Baris Rekonsiliasi | 1 |
+| Baris Nasional Gold | 90 |
+| Baris Rekonsiliasi | 136 |
 | Sidik data mentah (`data_hash`) | `f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f` |
 | Aturan validasi | 24 |
 | Lolos | 24 |
