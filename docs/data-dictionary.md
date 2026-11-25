@@ -147,7 +147,107 @@ print('HASIL: Nilai sel mentah C6 (100) terbukti identik dengan nilai Silver (10
 
 ---
 
-## 5. data/gold/<tabel>.parquet
+## 5. data/gold/panel.parquet (Panel Provinsi × Periode × Indikator)
 
-Kolom Gold ditambahkan pada Sprint 2–3, setelah tabel panel provinsi × periode × indikator dan tabel rekonsiliasi pembanding disusun. Sprint 1 berfokus pada validasi, penjaminan lineage, dan pendokumentasian tabel Silver.
+Satu baris = satu indikator × provinsi × periode, mencakup seluruh sel dari kerangka grid (termasuk sel kosong). Kunci unik: `["indikator", "wilayah_kode", "periode"]`. Tabel ini memuat 10 indikator utama pada susunan 38 provinsi tahun 2025 untuk rentang waktu 2010–2025 (total 3.382 baris). Tampilan versi lebar (satu kolom per indikator untuk sel terisi) tersedia pada `data/gold/panel_lebar.parquet`.
+
+| Nama Kolom | Tipe Data | Satuan / Format | Arti / Makna | Asal (Kolom Silver / Keputusan Log) | Boleh Kosong | Rentang / Nilai Sah |
+|---|---|---|---|---|---|---|
+| `indikator` | string (`object`) | — (label indikator) | Label deret utama kanonik. Berisi kode seri langsung atau format `kode [rincian]` untuk seri yang memiliki rincian dimensi. | Definisi deret kanonik pada `DERET` (`src/silver/deret.py` / `src/konfigurasi.py`) yang ditransformasi dari Silver (Keputusan K-005). | Tidak (0 kosong) | 10 nilai indikator baku (lihat tabel satuan per indikator di bawah). |
+| `seri_kode` | string (`object`) | — (kode indikator) | Identitas kode indikator dasar asal pengukuran. | Diambil langsung dari kolom `seri_kode` pada tabel Silver. | Tidak (0 kosong) | 10 kode seri unik BNPB. |
+| `rincian` | string (`object`) | — (kategori dimensi) | Dimensi rincian pengamatan yang dipilih pada panel kanonik (`jumlah` untuk jumlahan jenis bencana, atau `total` untuk agregat). | Diambil dari kolom `rincian` Silver yang difilter sesuai aturan deret (Keputusan K-005, K-006). | Tidak (0 kosong) | 2 nilai: `jumlah` (9 indikator korban/kejadian) dan `total` (`jumlah_penduduk`). |
+| `wilayah_kode` | integer (`int64`) | Kode wilayah (BPS 2 digit × 100) | Kode numerik wilayah administratif tingkat provinsi. | Diambil dari kolom `wilayah_kode` Silver (Keputusan K-001: susunan 38 provinsi tahun 2025). | Tidak (0 kosong) | 38 kode provinsi resmi (1100–9700, tanpa kode nasional 9999). |
+| `nama_wilayah` | string (`object`) | — (nama baku) | Nama resmi wilayah administratif provinsi. | Diambil dari kolom `nama_wilayah` Silver via kamus `src/wilayah.py`. | Tidak (0 kosong) | 38 nama baku provinsi Indonesia susunan 2025. |
+| `periode` | string (`object`) | Tahun kalender `YYYY` | Tahun observasi pengamatan bencana dalam resolusi tahunan. | Diambil dari kolom `periode` Silver (Keputusan K-005, K-016). | Tidak (0 kosong) | 16 nilai tahun unik: `2010` s.d. `2025`. |
+| `jenis_periode` | string (`object`) | — (kategori frekuensi) | Skala granularitas waktu pengamatan data panel. | Diambil dari kolom `jenis_periode` Silver. | Tidak (0 kosong) | Hanya bernilai `tahun`. |
+| `nilai` | float (`float64`) | Mengikuti kolom `satuan` | Besaran kuantitatif observasi yang diukur. Sel kosong pada grid diisi `NaN` tanpa interpolasi buatan. | Diambil dari kolom `nilai` Silver untuk sel terisi; `NaN` untuk sel yang tidak/belum terbit (Keputusan K-027). | Ya (2.008 kosong dari total 3.382 sel) | Rentang `0.0` hingga `50.759.000.0` (pada sel terisi). |
+| `satuan` | string (`object`) | Unit pengukuran baku | Satuan fisik dari angka pada kolom `nilai` (`jiwa`, `kejadian`, `per_100000_penduduk`). | Diambil dari kolom `satuan` Silver sesuai kamus konfigurasi `SATUAN` (Keputusan K-011, K-018). | Tidak (0 kosong) | 3 nilai: `jiwa`, `kejadian`, `per_100000_penduduk`. |
+| `status_sel` | string (`object`) | — (kategori status grid) | Kategori keterisian sel pada kerangka panel: `terisi` (ada observasi riil), `tidak_diterbitkan` (tidak ada tabel provinsi di katalog), atau `belum_ada` (provinsi belum terbentuk). | Diturunkan dari analisis grid kelengkapan panel Sprint 1 (`reports/grid-sel-kosong.csv`, Keputusan K-011, K-013). | Tidak (0 kosong) | 3 nilai sah: `terisi` (1.374 sel), `tidak_diterbitkan` (1.772 sel), `belum_ada` (236 sel). |
+| `penanda` | string (`object`) | — (kategori anomali) | Label penanda anomali data hasil audit empiris Sprint 1 (misal: `outlier` bencana besar atau `perbedaan_struktural`). Nilai data tetap dipertahankan apa adanya. | Diturunkan dari laporan deteksi anomali Sprint 1 (`reports/anomali.csv`, Keputusan K-004, K-012, K-013). | Ya (3.263 kosong / normal) | 119 sel bertanda: `outlier` (101 sel), `perbedaan_struktural` (18 sel). |
+| `rujukan_tahun` | float (`float64`) | Tahun kalender | Lebar jendela rujukan survei (tahun sebelum survei). | Diambil dari kolom `rujukan_tahun` Silver (seluruhnya kosong karena kasus bencana bersumber registrasi administratif). | Ya (seluruhnya kosong / NaN) | Kosong (`NaN`). |
+| `_berkas_raw` | string (`object`) | Jalur relatif terhadap `data/raw/` | Jejak silsilah (*lineage*) berkas mentah sumber asal sel terpilih (kosong untuk sel yang tidak terbit/belum ada). | Diambil dari kolom `_berkas_raw` Silver berdasarkan urutan prioritas berkas kanonik (Keputusan K-007). | Ya (2.008 kosong pada sel kosong) | 16 jalur berkas mentah unik BNPB. |
+| `_sha256_raw` | string (`object`) | Hash heksadesimal 64 karakter | Sidik integritas kriptografis berkas mentah sumber (kosong untuk sel yang tidak terbit/belum ada). | Diambil dari kolom `_sha256_raw` Silver dan diverifikasi terhadap `MANIFEST.csv`. | Ya (2.008 kosong pada sel kosong) | 16 hash heksadesimal unik valid. |
+
+> **Catatan Variasi Kolom Turunan Workspace:**  
+> Pada implementasi repositori kelompok, tabel `data/gold/panel.parquet` memuat 3 kolom kalkulasi pembantu tambahan untuk mempermudah pemodelan lanjutan, yaitu: `rincian_kode` (integer ID rincian), `nilai_per_100rb` (normalisasi rasio per 100 ribu penduduk terhadap penduduk provinsi), dan `nilai_log1p` (transformasi $\log(1 + x)$ untuk analisis sebaran). Nilai asli pada kolom `nilai` tetap murni tanpa modifikasi.
+
+#### Satuan per Indikator Panel:
+| Indikator | Satuan |
+|---|---|
+| `jumlah_penduduk` | `jiwa` |
+| `kejadian [jumlah]` | `kejadian` |
+| `korban_hilang [jumlah]` | `jiwa` |
+| `korban_luka_sakit [jumlah]` | `jiwa` |
+| `korban_mengungsi [jumlah]` | `jiwa` |
+| `korban_mengungsi_per_100rb [jumlah]` | `per_100000_penduduk` |
+| `korban_meninggal [jumlah]` | `jiwa` |
+| `korban_meninggal_hilang_per_100rb [jumlah]` | `per_100000_penduduk` |
+| `korban_terdampak [jumlah]` | `jiwa` |
+| `korban_terdampak_mengungsi [jumlah]` | `jiwa` |
+
+---
+
+## 6. data/gold/nasional.parquet (Tabel Agregat Tingkat Nasional)
+
+Satu baris = satu seri × rincian × periode tingkat Indonesia. Kunci unik: `["seri_kode", "rincian", "periode"]`. Tabel ini mengompilasi seluruh observasi tingkat nasional dari terbitan resmi BNPB kode `9999`, indikator pembanding WDI, serta jumlahan agregat 38 provinsi (78 baris, 11 seri, periode 2009–2025). Pada repositori kelompok juga disediakan versi tabel terdisagregasi `data/gold/tabel_nasional.parquet` dan format matriks periode `tabel_nasional_periode_seri.parquet`.
+
+| Nama Kolom | Tipe Data | Satuan / Format | Arti / Makna | Asal (Kolom Silver / Keputusan Log) | Boleh Kosong | Rentang / Nilai Sah |
+|---|---|---|---|---|---|---|
+| `seri_kode` | string (`object`) | — (kode indikator) | Pengenal indikator tingkat nasional (mencakup 10 seri bencana BNPB, seri agregat provinsi, dan seri WDI `EN.CLC.MDAT.ZS`). | Diambil dari kolom `seri_kode` Silver atau dibentuk dari agregasi provinsi `kejadian (agregat provinsi)`. | Tidak (0 kosong) | 11 nilai kode seri nasional. |
+| `rincian` | string (`object`) | — (kategori dimensi) | Rincian dimensi pengamatan pada tingkat nasional (`total` atau `jenis_bencana=...`). | Diambil dari kolom `rincian` Silver. | Tidak (0 kosong) | Nilai rincian bencana dan `total`. |
+| `sumber` | string (`object`) | — (teks identifier) | Lembaga penerbit berkas mentah pengamatan nasional (`bnpb` atau `wdi`). | Diambil dari kolom `sumber` Silver. | Tidak (0 kosong) | 2 nilai: `bnpb` dan `wdi`. |
+| `periode` | string (`object`) | Tahun kalender `YYYY` | Tahun observasi pengamatan nasional dalam resolusi tahunan. | Diambil dari kolom `periode` Silver (Keputusan K-016). | Tidak (0 kosong) | 17 nilai tahun unik: `2009` s.d. `2025`. |
+| `jenis_periode` | string (`object`) | — (kategori frekuensi) | Skala granularitas waktu pengamatan nasional. | Diambil dari kolom `jenis_periode` Silver. | Tidak (0 kosong) | Hanya bernilai `tahun`. |
+| `nilai` | float (`float64`) | Mengikuti kolom `satuan` | Besaran kuantitatif observasi tingkat nasional. | Diambil dari kolom `nilai` Silver pada baris nasional `9999` atau hasil kalkulasi jumlahan provinsi. | Tidak (0 kosong) | Rentang `0.16059` (persen WDI) hingga `284.438.800.0` (penduduk). |
+| `satuan` | string (`object`) | Unit pengukuran baku | Satuan ukuran fisik dari kolom `nilai` (`jiwa`, `kejadian`, `per_100000_penduduk`, `persen`). | Diambil dari kolom `satuan` Silver sesuai bukti katalog (Keputusan K-011, K-018). | Tidak (0 kosong) | 4 nilai sah: `jiwa`, `kejadian`, `per_100000_penduduk`, `persen`. |
+| `batas_bawah` | float (`float64`) | Sesuai satuan | Batas bawah interval ketidakpastian. | Diambil dari kolom `batas_bawah` Silver (kosong bila sumber tidak menyediakan). | Ya (seluruhnya kosong / NaN) | Kosong (`NaN`). |
+| `batas_atas` | float (`float64`) | Sesuai satuan | Batas atas interval ketidakpastian. | Diambil dari kolom `batas_atas` Silver (kosong bila sumber tidak menyediakan). | Ya (seluruhnya kosong / NaN) | Kosong (`NaN`). |
+| `rujukan_tahun` | float (`float64`) | Tahun kalender | Lebar jendela rujukan survei. | Diambil dari kolom `rujukan_tahun` Silver. | Ya (seluruhnya kosong / NaN) | Kosong (`NaN`). |
+| `asal` | string (`object`) | — (kategori asal baris) | Asal usul pembentukan baris nasional: `baris_indonesia` (terbitan tabel nasional resmi BNPB), `pembanding` (data WDI), atau `agregat` (jumlahan 38 provinsi). | Ditetapkan oleh modul `src/gold/nasional_gold.py` / `tabel_nasional.py` (Keputusan K-015, K-016). | Tidak (0 kosong) | 3 nilai: `baris_indonesia`, `pembanding`, `agregat`. |
+| `_berkas_raw` | string (`object`) | Jalur relatif terhadap `data/raw/` | Jalur berkas mentah sumber asal angka nasional. | Diambil dari kolom `_berkas_raw` Silver (Keputusan K-015). | Tidak (0 kosong) | 14 jalur berkas mentah unik. |
+| `_sha256_raw` | string (`object`) | Hash heksadesimal 64 karakter | Sidik integritas digital berkas mentah sumber (bernilai null untuk baris hasil agregasi internal). | Diambil dari kolom `_sha256_raw` Silver dan dicocokkan dengan `MANIFEST.csv`. | Ya (2 baris agregat bernilai kosong) | 12 hash heksadesimal unik valid. |
+
+---
+
+## 7. data/gold/rekonsiliasi.parquet (Tabel Rekonsiliasi Pembanding)
+
+Satu baris = satu pasangan rekonsiliasi × pembanding × periode. Kunci unik: `["pasangan_id", "seri_pembanding", "rincian_pembanding", "periode"]`. Tabel ini memuat hasil evaluasi dan komparasi kuantitatif antara seri utama BNPB dengan seri pembanding (hitungan ulang rasio, agregasi wilayah, dan data WDI) untuk 4 pasangan rekonsiliasi P1–P4 (19 baris pengamatan). Pada repositori kelompok juga tersedia tabel berformat `data/gold/tabel_rekonsiliasi.parquet`.
+
+| Nama Kolom | Tipe Data | Satuan / Format | Arti / Makna | Asal (Kolom Silver / Keputusan Log) | Boleh Kosong | Rentang / Nilai Sah |
+|---|---|---|---|---|---|---|
+| `pasangan_id` | string (`object`) | — (kode pasangan) | Pengenal unik pasangan rekonsiliasi (`P1`, `P2`, `P3`, `P4`). | Didefinisikan dalam kamus `PASANGAN` di `src/konfigurasi.py` (Keputusan K-016). | Tidak (0 kosong) | 4 nilai: `P1`, `P2`, `P3`, `P4`. |
+| `jenis` | string (`object`) | — (kategori evaluasi) | Tipe pembandingan: `selisih` (dihitung gap kuantitatifnya) atau `konteks` (disandingkan sebagai konteks makro tanpa hitungan selisih langsung). | Ditetapkan pada konfigurasi `PASANGAN` (Keputusan K-016). | Tidak (0 kosong) | 2 nilai: `selisih` (P1, P2, P3) dan `konteks` (P4 WDI). |
+| `seri_utama` | string (`object`) | — (kode indikator) | Seri indikator utama yang direkonsiliasi. | Diambil dari seri utama BNPB / WDI yang ditetapkan pada konfigurasi `PASANGAN`. | Tidak (0 kosong) | 4 seri: `korban_mengungsi_per_100rb`, `korban_meninggal_hilang_per_100rb`, `kejadian`, `EN.CLC.MDAT.ZS`. |
+| `rincian_utama` | string (`object`) | — (kategori dimensi) | Dimensi rincian seri utama yang dibandingkan. | Ditetapkan pada konfigurasi `PASANGAN`. | Tidak (0 kosong) | 2 nilai: `total` dan `jenis_bencana=banjir`. |
+| `seri_pembanding` | string (`object`) | — (nama pembanding) | Deskripsi atau nama seri pembanding yang dipasangkan (misal: formula hitungan ulang pembilang/penduduk, jumlahan provinsi, atau indikator sebanding). | Didefinisikan pada konfigurasi `PASANGAN` (`src/gold/rekonsiliasi.py`). | Tidak (0 kosong) | 4 seri pembanding resmi. |
+| `rincian_pembanding` | string (`object`) | — (kategori dimensi) | Rincian dimensi pembanding yang sebanding. | Ditetapkan pada konfigurasi `PASANGAN`. | Tidak (0 kosong) | 2 nilai: `hitung` dan `jenis_bencana=banjir`. |
+| `periode` | string (`object`) | Tahun kalender `YYYY` | Tahun observasi pembandingan. | Diambil dari kolom `periode` tabel nasional Gold. | Tidak (0 kosong) | 17 nilai tahun unik: `2009` s.d. `2025`. |
+| `nilai_utama` | float (`float64`) | Mengikuti kolom `satuan` | Nilai capaian seri utama pada periode terkait. | Diambil dari kolom `nilai` pada tabel nasional Gold (`data/gold/nasional.parquet`). | Tidak (0 kosong) | Rentang `0.16059` hingga `2.009.0`. |
+| `nilai_pembanding` | float (`float64`) | Mengikuti kolom `satuan` | Nilai capaian pembanding dalam satuan yang telah disetarakan dengan seri utama. | Dihitung dari tabel nasional / formula konversi `GOLD_KONVERSI` (Keputusan K-016). | Ya (15 kosong pada periode non-irisan) | Rentang `0.539659` hingga `2.009.0` (pada periode beririsan). |
+| `satuan` | string (`object`) | Unit pengukuran baku | Satuan ukuran pembandingan (`kejadian`, `per_100000_penduduk`, `persen`). | Ditetapkan pada kamus `PASANGAN` sesuai satuan seri utama (Keputusan K-018). | Tidak (0 kosong) | 3 nilai: `kejadian`, `per_100000_penduduk`, `persen`. |
+| `selisih` | float (`float64`) | Mengikuti kolom `satuan` | Selisih absolut antara nilai utama dikurangi nilai pembanding ($\text{nilai\_utama} - \text{nilai\_pembanding}$). | Dihitung secara matematis di `src/gold/rekonsiliasi.py` (kosong pada pasangan konteks atau non-irisan). | Ya (15 kosong pada baris tanpa pembanding) | Rentang `-8.0` hingga `0.0`. |
+| `selisih_relatif` | float (`float64`) | Persen (`%`) | Persentase selisih relatif terhadap pembanding: $100 \times \frac{\text{selisih}}{\text{nilai\_pembanding}}$. | Dihitung secara matematis di `src/gold/rekonsiliasi.py`. | Ya (15 kosong) | Rentang `-0.5602%` hingga `0.0%` (median selisih relatif = 0.0%). |
+| `asal` | string (`object`) | — (status pasangan) | Status ketersediaan data pembanding: `keduanya` (kedua nilai ada dan dapat dibandingkan) atau `hanya_utama` (hanya seri utama yang terbit). | Ditentukan otomatis oleh algoritma penyandingan rekonsiliasi. | Tidak (0 kosong) | 2 nilai: `keduanya` (4 baris) dan `hanya_utama` (15 baris). |
+| `kategori` | string (`object`) | — (kategori baku selisih) | Klasifikasi baku penyebab selisih/hubungan: `tidak berselisih`, `definisi berbeda`, atau `tanpa pasangan`. | Pemetaan kategori baku pada konfigurasi `PASANGAN` (Keputusan K-016). | Tidak (0 kosong) | 3 kategori baku: `tidak berselisih` (P1, P2), `definisi berbeda` (P3), `tanpa pasangan` (P4). |
+| `penjelasan` | string (`object`) | — (narasi bukti) | Penjelasan substantif metodologis penyebab selisih didukung bukti empiris data mentah. | Ditetapkan pada konfigurasi `PASANGAN` (Keputusan K-016). | Tidak (0 kosong) | Teks penjelasan lengkap per pasangan (misal: kejadian multi-provinsi dihitung sekali secara nasional pada P3). |
+| `catatan` | string (`object`) | — (catatan teknis) | Keterangan teknis alasan selisih tidak dihitung atau metode hitung pembanding. | Dihasilkan otomatis oleh modul rekonsiliasi. | Ya (15 baris kosong) | Deskripsi formula pembanding atau alasan teknis. |
+
+---
+
+## 8. Contoh Penelusuran Satu Sel Gold ke Silver dan Berkas Mentah
+
+Berikut adalah pembuktian silsilah (*lineage*) satu sel pada tabel panel Gold hingga ke baris Silver dan sel fisik berkas mentah:
+
+| Kolom Indikator | Wilayah Kode | Periode | Nilai Gold | Satuan | Berkas Sumber Mentah (`_berkas_raw`) |
+|---|---|---|---|---|---|
+| `jumlah_penduduk` | `1100` (Aceh) | `2025` | `5,626,000.00` | `jiwa` | `bnpb/2026-10-20/tangan/kompilasi-data-kejadian-dan-dampak-bencana-2025/31a0d329-a363-4a16-852c-f4fa51f313bf-jumlah-korban-mengungsi-per-100.000-orang-akibat-bencana-menurut-provinsi-2025.xlsx` |
+
+### Tahapan Verifikasi Silsilah (*Lineage Audit*):
+1. **Dari Gold ke Silver**:  
+   Sel Gold di atas ditelusuri ke tabel Silver `data/silver/silver.parquet` pada kunci: `seri_kode = "jumlah_penduduk"`, `wilayah_kode = 1100`, `periode = "2025"`, dan `rincian = "total"`. Ditemukan tepat satu baris Silver dengan nilai yang sama persis: `5.626.000,0` jiwa.
+2. **Dari Silver ke Berkas Mentah**:  
+   Baris Silver tersebut membawa `_berkas_raw` yang menunjuk ke berkas Excel `31a0d329-...-menurut-provinsi-2025.xlsx` dan hash `_sha256_raw` sebesar `804d953ed748a1c85da940ae890233d1ee368c6eb05d5ddc90e4a23e25c89bcd`.
+3. **Kesesuaian dengan Manifest**:  
+   Sidik hash di atas cocok 100% dengan baris berkas terkait pada `data/raw/MANIFEST.csv`. Di lembar kerja Excel aslinya, angka 5.626.000 tercantum pada baris Provinsi Aceh di kolom `Jumlah Penduduk`. Hal ini membuktikan bahwa sel Gold tertelusur secara utuh (*end-to-end traceable*) ke sumber primernya.
+
 
