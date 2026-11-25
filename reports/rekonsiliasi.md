@@ -6,33 +6,38 @@ Dokumen ini memuat tabel nasional periode × seri dan daftar pasangan rekonsilia
 
 ## 1. Tabel Nasional (Periode × Seri)
 
-Tabel nasional mengintegrasikan baris agregat nasional (`wilayah_kode = 9999` / `INDONESIA`) dari seri utama BNPB dan seri pembanding WDI (`EN.CLC.MDAT.ZS`). Berkas tersimpan dalam format:
-- CSV: `reports/tabel_nasional_periode_seri.csv`
-- CSV: `data/gold/tabel_nasional_periode_seri.csv`
-- Parquet: `data/gold/tabel_nasional_periode_seri.parquet`
+Tabel nasional mengintegrasikan baris agregat nasional dari seri utama BNPB dan seri pembanding WDI (`EN.CLC.MDAT.ZS`). Berkas tersimpan dalam format:
+- **Tabel Panjang Gold (satu baris per periode × seri)**: `data/gold/tabel_nasional.parquet` dan `data/gold/tabel_nasional.csv` (memuat kolom `asal`, `aturan_agregat`, dan `_berkas_raw`).
+- **Tabel Lebar Gold (periode × seri)**: `data/gold/tabel_nasional_periode_seri.parquet` dan `data/gold/tabel_nasional_periode_seri.csv`.
+- **Salinan Laporan**: `reports/tabel_nasional_periode_seri.csv`.
 
-Skrip pembentuk tabel: `python -m src.gold.tabel_nasional`.
+Skrip pembentuk tabel: `python -m src.gold.tabel_nasional` (dieksekusi otomatis oleh `python pipeline.py`).
 
 ### Ringkasan Nilai Nasional Per Tahun
-| Periode | Kejadian | Meninggal | Hilang | Luka/Sakit | Mengungsi | Terdampak | Mengungsi / 100rb | Meninggal+Hilang / 100rb | Penduduk | WDI EN.CLC.MDAT.ZS (%) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **2009** | — | — | — | — | — | — | — | — | — | 0,16059 |
-| **2010** | 1.945 | — | 277 | 35.730 | 892.261 | 770.842 | — | — | — | — |
-| **2011** | 1.619 | — | 69 | 692 | 228.696 | 246.833 | — | — | — | — |
-| **2012** | 1.780 | — | 38 | 1.198 | 135.483 | 818.758 | — | — | — | — |
-| **2013** | 1.666 | — | 44 | 3.410 | 507.183 | 3.385.803 | — | — | — | — |
-| **2014** | 1.961 | — | 72 | 2.104 | 860.615 | 1.953.650 | — | — | — | — |
-| **2015** | 1.694 | — | 57 | 370 | 184.254 | 1.043.675 | — | — | — | — |
-| **2016** | 2.306 | — | 96 | 2.675 | 438.925 | 2.723.566 | — | — | — | — |
-| **2017** | 2.866 | — | 69 | 1.042 | 324.996 | 3.349.373 | — | — | — | — |
-| **2018** | 3.397 | — | 725 | 21.171 | 852.369 | 9.524.726 | — | — | — | — |
-| **2019** | 3.814 | — | 111 | 3.421 | 436.234 | 5.693.171 | — | — | — | — |
-| **2020** | 4.649 | — | 42 | 619 | 922.367 | 5.873.967 | — | — | — | — |
-| **2021** | 5.402 | — | 87 | 14.915 | 684.215 | 7.581.247 | — | — | — | — |
-| **2022** | 3.544 | — | 37 | 8.733 | 595.422 | 5.492.456 | — | — | — | — |
-| **2023** | 5.400 | — | 33 | 5.795 | 150.469 | 8.340.819 | — | — | — | — |
-| **2024** | 3.472 | 540 | 63 | 11.531 | 528.513 | 7.607.758 | — | — | — | — |
-| **2025** | 4.727 | 1.666 | 214 | 6.799 | 1.154.803 | 10.955.315 | 405,99349 | 0,66095 | 284.438.800 | — |
+| Periode | Kejadian | Meninggal | Hilang | Luka/Sakit | Mengungsi | Terdampak | Terdampak-Mengungsi | Mengungsi / 100rb | Meninggal+Hilang / 100rb | Penduduk | WDI EN.CLC.MDAT.ZS (%) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **2009** | — | — | — | — | — | — | — | — | — | — | 0,16059 |
+| **2010** | 1.945 | — | 277 | 35.730 | 892.261 | 770.842 | — | — | — | — | — |
+| **2011** | 1.619 | — | 69 | 692 | 228.696 | 246.833 | — | — | — | — | — |
+| **2012** | 1.780 | — | 38 | 1.198 | 135.483 | 818.758 | — | — | — | — | — |
+| **2013** | 1.666 | — | 44 | 3.410 | 507.183 | 3.385.803 | — | — | — | — | — |
+| **2014** | 1.961 | — | 72 | 2.104 | 860.615 | 1.953.650 | — | — | — | — | — |
+| **2015** | 1.694 | — | 57 | 370 | 184.254 | 1.043.675 | — | — | — | — | — |
+| **2016** | 2.306 | — | 96 | 2.675 | 438.925 | 2.723.566 | — | — | — | — | — |
+| **2017** | 2.866 | — | 69 | 1.042 | 324.996 | 3.349.373 | — | — | — | — | — |
+| **2018** | 3.397 | — | 725 | 21.171 | 852.369 | 9.524.726 | — | — | — | — | — |
+| **2019** | 3.814 | — | 111 | 3.421 | 436.234 | 5.693.171 | — | — | — | — | — |
+| **2020** | 4.649 | — | 42 | 619 | 922.367 | 5.873.967 | — | — | — | — | — |
+| **2021** | 5.402 | 728* | 87 | 14.915 | 684.215 | 7.581.247 | 8.265.462* | — | — | — | — |
+| **2022** | 3.544 | 858* | 37 | 8.733 | 595.422 | 5.492.456 | 6.087.878* | — | — | — | — |
+| **2023** | 5.400 | — | 33 | 5.795 | 150.469 | 8.340.819 | — | — | — | — | — |
+| **2024** | 3.472 | 540 | 63 | 11.531 | 528.513 | 7.607.758 | — | — | — | — | — |
+| **2025** | 4.727 | 1.666 | 214 | 6.799 | 1.154.803 | 10.955.315 | — | 405,99349 | 0,66095 | 284.438.800 | — |
+
+*\*Catatan Asal Angka:*
+- Angka bertanda asterisk (`*`) diperoleh dari **`agregat_provinsi`** (penjumlahan aditif seluruh 34 provinsi dengan bobot 1 per provinsi) karena BNPB tidak menerbitkan baris nasional `INDONESIA` pada berkas rekap 2021 dan 2022.
+- Angka lainnya berasal dari **`baris_indonesia`** (diterbitkan langsung oleh BNPB untuk wilayah nasional) atau **`pembanding`** (WDI Bank Dunia).
+- Seri rasio per 100.000 penduduk dan `jumlah_penduduk` sebelum 2025 tidak memiliki padanan nasional karena rasio memerlukan pembobotan populasi dan data penduduk tidak diterbitkan BNPB pada 2010–2024.
 
 ---
 

@@ -15,6 +15,6 @@ def jalankan(silver):
     """Terima Silver, bangun tabel Gold, dan kembalikan kamus hasil."""
     hasil = {}
     hasil["panel"] = panel.jalankan(silver)
-    hasil["nasional"] = tabel_nasional.buat_tabel_nasional()
+    hasil["nasional"] = tabel_nasional.buat_tabel_nasional(silver)
     hasil["baris_sql"] = muat_sql.muat_silver_ke_sqlite()
     return hasil
