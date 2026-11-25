@@ -1,7 +1,8 @@
 {
   "metrik": {
-    "tabel_sql": 4,
     "pasangan_rekonsiliasi": 3,
+    "selisih_median": 0.0,
+    "tabel_sql": 4,
     "periode_beririsan": 0
   },
   "seed": 0,

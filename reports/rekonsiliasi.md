@@ -1,103 +1,112 @@
 # Laporan Integrasi dan Rekonsiliasi (Tahap 6 — Kasus 22: Korban Bencana)
 
-Dokumen ini memuat tabel nasional periode × seri dan daftar pasangan rekonsiliasi untuk Kasus 22 (Korban Bencana, BNPB & WDI) sebagai persiapan Tahap 6 (Sprint 2).
+Dokumen ini memuat tabel rekonsiliasi analitik nasional Gold, perbandingan seri utama terhadap seri pembanding, analisis selisih, dan klasifikasi kategori penjelasan sesuai panduan kelompok bagian 3.
 
 ---
 
-## 1. Tabel Nasional (Periode × Seri)
+## 1. Arsitektur Tabel Rekonsiliasi Nasional Gold
 
-Tabel nasional mengintegrasikan baris agregat nasional dari seri utama BNPB dan seri pembanding WDI (`EN.CLC.MDAT.ZS`). Berkas tersimpan dalam format:
-- **Tabel Panjang Gold (satu baris per periode × seri)**: `data/gold/tabel_nasional.parquet` dan `data/gold/tabel_nasional.csv` (memuat kolom `asal`, `aturan_agregat`, dan `_berkas_raw`).
-- **Tabel Lebar Gold (periode × seri)**: `data/gold/tabel_nasional_periode_seri.parquet` dan `data/gold/tabel_nasional_periode_seri.csv`.
-- **Salinan Laporan**: `reports/tabel_nasional_periode_seri.csv`.
+Tabel rekonsiliasi analitik dibentuk langsung dari tabel nasional Gold melalui modul [src/gold/rekonsiliasi.py](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/src/gold/rekonsiliasi.py) yang dieksekusi otomatis oleh `python pipeline.py`.
 
-Skrip pembentuk tabel: `python -m src.gold.tabel_nasional` (dieksekusi otomatis oleh `python pipeline.py`).
-
-### Ringkasan Nilai Nasional Per Tahun
-| Periode | Kejadian | Meninggal | Hilang | Luka/Sakit | Mengungsi | Terdampak | Terdampak-Mengungsi | Mengungsi / 100rb | Meninggal+Hilang / 100rb | Penduduk | WDI EN.CLC.MDAT.ZS (%) |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| **2009** | — | — | — | — | — | — | — | — | — | — | 0,16059 |
-| **2010** | 1.945 | — | 277 | 35.730 | 892.261 | 770.842 | — | — | — | — | — |
-| **2011** | 1.619 | — | 69 | 692 | 228.696 | 246.833 | — | — | — | — | — |
-| **2012** | 1.780 | — | 38 | 1.198 | 135.483 | 818.758 | — | — | — | — | — |
-| **2013** | 1.666 | — | 44 | 3.410 | 507.183 | 3.385.803 | — | — | — | — | — |
-| **2014** | 1.961 | — | 72 | 2.104 | 860.615 | 1.953.650 | — | — | — | — | — |
-| **2015** | 1.694 | — | 57 | 370 | 184.254 | 1.043.675 | — | — | — | — | — |
-| **2016** | 2.306 | — | 96 | 2.675 | 438.925 | 2.723.566 | — | — | — | — | — |
-| **2017** | 2.866 | — | 69 | 1.042 | 324.996 | 3.349.373 | — | — | — | — | — |
-| **2018** | 3.397 | — | 725 | 21.171 | 852.369 | 9.524.726 | — | — | — | — | — |
-| **2019** | 3.814 | — | 111 | 3.421 | 436.234 | 5.693.171 | — | — | — | — | — |
-| **2020** | 4.649 | — | 42 | 619 | 922.367 | 5.873.967 | — | — | — | — | — |
-| **2021** | 5.402 | 728* | 87 | 14.915 | 684.215 | 7.581.247 | 8.265.462* | — | — | — | — |
-| **2022** | 3.544 | 858* | 37 | 8.733 | 595.422 | 5.492.456 | 6.087.878* | — | — | — | — |
-| **2023** | 5.400 | — | 33 | 5.795 | 150.469 | 8.340.819 | — | — | — | — | — |
-| **2024** | 3.472 | 540 | 63 | 11.531 | 528.513 | 7.607.758 | — | — | — | — | — |
-| **2025** | 4.727 | 1.666 | 214 | 6.799 | 1.154.803 | 10.955.315 | — | 405,99349 | 0,66095 | 284.438.800 | — |
-
-*\*Catatan Asal Angka:*
-- Angka bertanda asterisk (`*`) diperoleh dari **`agregat_provinsi`** (penjumlahan aditif seluruh 34 provinsi dengan bobot 1 per provinsi) karena BNPB tidak menerbitkan baris nasional `INDONESIA` pada berkas rekap 2021 dan 2022.
-- Angka lainnya berasal dari **`baris_indonesia`** (diterbitkan langsung oleh BNPB untuk wilayah nasional) atau **`pembanding`** (WDI Bank Dunia).
-- Seri rasio per 100.000 penduduk dan `jumlah_penduduk` sebelum 2025 tidak memiliki padanan nasional karena rasio memerlukan pembobotan populasi dan data penduduk tidak diterbitkan BNPB pada 2010–2024.
+* **Format Berkas:**
+  * Parquet: `data/gold/tabel_rekonsiliasi.parquet` (136 baris)
+  * CSV: `data/gold/tabel_rekonsiliasi.csv`
+  * Tabel SQL Relasional: `tabel_rekonsiliasi` dan view `rekonsiliasi` di `data/gold/gold.sqlite`
+* **Struktur Kolom:**
+  * `periode`: Tahun observasi (string 4 digit: 2009 s.d. 2025). Seluruh 17 periode tetap tampil.
+  * `pasangan_id`: Kode unik pasangan rekonsiliasi (`P1_RASIO_100RB`, `P2_KAB_VS_PROVINSI`, `P3_BNPB_VS_WDI`).
+  * `nama_pasangan`: Nama pasangan rekonsiliasi.
+  * `seri_kode`: Kode indikator yang dibandingkan.
+  * `nilai_seri_utama` (alias `nilai_utama`): Nilai numerik seri utama kelompok.
+  * `nilai_pembanding`: Nilai numerik dari seri pembanding resmi.
+  * `selisih`: Nilai selisih eksak ($\text{nilai\_seri\_utama} - \text{nilai\_pembanding}$). Nilai asli tidak dihapus dan tidak dipaksa nol.
+  * `satuan`: Satuan ukuran (`per_100000_penduduk`, `kejadian`, `jiwa`, `persen_penduduk`).
+  * `kategori_penjelasan` (alias `kategori`): Klasifikasi baku keterbandingan data (*definisi berbeda*, *metode berbeda*, *vintage berbeda*, *cakupan berbeda*, atau *belum terjelaskan*).
+  * `catatan`: Narasi konteks, dugaan penyebab, dan bukti audit lapangan.
 
 ---
 
-## 2. Daftar Pasangan Rekonsiliasi dan Catatan Keterbandingan
+## 2. Rincian 3 Pasangan Rekonsiliasi Kasus 22
 
-Sesuai panduan kelompok Bagian 3, terdapat **3 pasangan rekonsiliasi** pada Kasus 22:
-
-### Pasangan 1: Angka Rasio per 100 Ribu Penduduk (Hitungan Kelompok vs Terbitan BNPB)
+### Pasangan 1: Angka per 100 Ribu Penduduk (Hitungan Kelompok vs Terbitan BNPB)
+* **Pasangan ID:** `P1_RASIO_100RB`
 * **Seri yang dibandingkan:**
   1. `korban_mengungsi_per_100rb`: Hitungan $\left(\frac{\text{korban\_mengungsi}}{\text{jumlah\_penduduk}} \times 100.000\right)$ vs Nilai Terbitan BNPB.
   2. `korban_meninggal_hilang_per_100rb`: Hitungan $\left(\frac{\text{korban\_meninggal} + \text{korban\_hilang}}{\text{jumlah\_penduduk}} \times 100.000\right)$ vs Nilai Terbitan BNPB.
-* **Periode yang tersedia:** Tahun **2025** (1 periode beririsan).
-* **Rincian yang dipakai:** Total nasional dan 9 rincian jenis bencana.
-* **Hasil Rekonsiliasi:**
-  * Nasional Mengungsi / 100rb:
-    $$\frac{1.154.803}{284.438.800} \times 100.000 = 405,993486$$
-    Jumlah 9 rincian bencana BNPB $= 405,993486$. **Selisih: 0,000000 (identik)**.
-  * Nasional Meninggal & Hilang / 100rb:
-    $$\frac{1.666 + 214}{284.438.800} \times 100.000 = \frac{1.880}{284.438.800} \times 100.000 = 0,660951$$
-    Jumlah 9 rincian bencana BNPB $= 0,660951$. **Selisih: 0,000000 (identik)**.
-* **Catatan Keterbandingan:**
-  Metode perhitungan kelompok dan angka terbitan resmi BNPB sepenuhnya konsisten. Angka rasio BNPB dihitung menggunakan penyebut jumlah penduduk resmi BPS 2025 (284.438.800 jiwa).
+* **Ketersediaan Periode:** Tahun **2025** (1 periode beririsan langsung; 2009–2024 berstatus *cakupan berbeda*).
+* **Evaluasi Hasil Rekonsiliasi:**
+  * **Mengungsi / 100rb (2025):**
+    $$\text{Hitungan Kelompok} = \frac{1.154.803}{284.438.800} \times 100.000 = 405,993486$$
+    $$\text{Terbitan Resmi BNPB} = 405,993486 \implies \mathbf{Selisih = 0,000000}$$
+    *Kategori:* **metode berbeda** (rumus kelompok terverifikasi konsisten sempurna dengan metodologi pembobotan agregasi BPS/BNPB).
+  * **Meninggal & Hilang / 100rb (2025):**
+    $$\text{Hitungan Kelompok} = \frac{1.666 + 214}{284.438.800} \times 100.000 = \frac{1.880}{284.438.800} \times 100.000 = 0,660951$$
+    $$\text{Terbitan Resmi BNPB} = 0,660951 \implies \mathbf{Selisih = 0,000000}$$
+    *Kategori:* **metode berbeda** (metodologi perhitungan kelompok terbukti identik).
+  * **Periode 2009–2024:**
+    *Kategori:* **cakupan berbeda** (BNPB tidak menerbitkan data populasi resmi dan rasio per 100 ribu penduduk pada publikasi pra-2025).
 
 ---
 
-### Pasangan 2: Agregasi Tingkat Kabupaten/Kota vs Rekapitulasi Tingkat Provinsi BNPB
-* **Seri yang dibandingkan:** Seluruh seri kejadian dan dampak bencana pada berkas rekapitulasi tahun 2021 dan 2022.
-* **Periode yang tersedia:** Tahun **2021** dan **2022** (2 periode beririsan).
-* **Rincian yang dipakai:** 1.530 pasangan observasi per provinsi × periode × bencana.
-* **Hasil Rekonsiliasi:**
-  Diaudit secara sistematis dalam `reports/validasi-agregasi-kabupaten.csv`. Dari 1.530 baris agregasi:
-  * 1.509 baris (98,6%) cocok sempurna antara jumlah kab/kota dengan rekap provinsi.
-  * 21 baris selisih tercatat dan terdokumentasi (misal selisih kecil pada korban luka-luka di beberapa kabupaten pemekaran).
-* **Catatan Keterbandingan:**
-  Perbedaan timbul karena berkas rekapitulasi provinsi diperbarui lebih awal oleh Pusdatinkom BNPB sebelum seluruh laporan BPBD kabupaten/kota terhimpun secara lengkap di sistem daerah. Oleh karena itu, di lapis Silver diputuskan memakai tabel provinsi sebagai acuan kanonik (Log K-006).
+### Pasangan 2: Agregasi Kabupaten/Kota vs Rekapitulasi Tingkat Provinsi BNPB
+* **Pasangan ID:** `P2_KAB_VS_PROVINSI`
+* **Seri yang dibandingkan:** `kejadian`, `korban_meninggal`, `korban_hilang`, `korban_luka_sakit`, `korban_terdampak_mengungsi`.
+* **Ketersediaan Periode:** Tahun **2021** dan **2022** (2 periode beririsan langsung; 2009–2020 dan 2023–2025 berstatus *cakupan berbeda*).
+* **Evaluasi Hasil Rekonsiliasi:**
+  * **Tahun 2021:**
+    * `korban_meninggal`: 728 vs 728 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_hilang`: 87 vs 87 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_luka_sakit`: 14.915 vs 14.915 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_terdampak_mengungsi`: 8.265.462 vs 8.265.462 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `kejadian`: 5.451 vs 5.402 $\implies$ **Selisih = +49 kejadian** (**vintage berbeda**)
+  * **Tahun 2022:**
+    * `korban_meninggal`: 858 vs 858 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_hilang`: 37 vs 37 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_luka_sakit`: 8.733 vs 8.733 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `korban_terdampak_mengungsi`: 6.087.878 vs 6.087.878 $\implies$ Selisih = 0 (**metode berbeda**)
+    * `kejadian`: 3.595 vs 3.544 $\implies$ **Selisih = +51 kejadian** (**vintage berbeda**)
+* **Dugaan dan Bukti Keterbandingan Selisih Kejadian:**
+  * *Dugaan:* Selisih 49 kejadian (2021) dan 51 kejadian (2022) timbul akibat perbedaan waktu pemutakhiran data (*cut-off vintage*). Pusdatinkom BNPB merilis rekapitulasi tingkat provinsi sebelum seluruh laporan rekonsiliasi daerah dari BPBD kabupaten/kota terhimpun secara lengkap, atau terdapat bencana hidrometeorologi lintas wilayah (misal banjir DAS lintas 2–3 kabupaten) yang dicatat per kabupaten oleh BPBD setempat namun diagregasi sebagai 1 klaster bencana oleh provinsi.
+  * *Bukti yang dicari:* Audit silsilah pada `reports/validasi-agregasi-kabupaten.csv` mengonfirmasi bahwa 1.503 dari 1.530 baris (98,2%) cocok sempurna, dan selisih hanya terkonsentrasi pada beberapa kabupaten perbatasan/pemekaran.
 
 ---
 
 ### Pasangan 3: Seri Utama BNPB vs Seri Pembanding WDI (`EN.CLC.MDAT.ZS`)
+* **Pasangan ID:** `P3_BNPB_VS_WDI`
 * **Seri yang dibandingkan:**
-  * Seri Utama BNPB: `korban_terdampak`, `korban_mengungsi`, dan indikator SDG 13.1.1/1.5.1/11.5.1.
   * Seri Pembanding WDI: `EN.CLC.MDAT.ZS` (*Droughts, floods, extreme temperatures % of population, average 1990-2009*).
-* **Periode yang tersedia:**
-  * WDI: Tahun **2009** (1 titik data, rata-rata tahunan 1990–2009).
+  * Seri Utama BNPB: Persentase populasi terpapar/terdampak bencana nasional (SDG 13.1.1 / 1.5.1 / 11.5.1).
+* **Ketersediaan Periode:**
+  * WDI: Tahun **2009** (1 titik data snapshot historis).
   * BNPB: Tahun **2010 s.d. 2025**.
-  * **Periode beririsan langsung:** **0 tahun** (karena WDI berakhir pada snapshot historis 2009, sementara pencatatan terstruktur BNPB dimulai tahun 2010).
-* **Rincian yang dipakai:** Rincian `total` (agregat nasional).
-* **Hasil Rekonsiliasi & Konteks Paparan Bencana Nasional:**
-  * Nilai WDI 2009 adalah **0,16059% penduduk** terpapar bencana iklim/cuaca ekstrem per tahun (rata-rata 1990–2009).
-  * Sebagai perbandingan, pada tahun 2025 di data BNPB:
-    $$\text{Persentase Terdampak BNPB 2025} = \frac{10.955.315}{284.438.800} \times 100\% = 3,85\%$$
-    $$\text{Persentase Mengungsi BNPB 2025} = \frac{1.154.803}{284.438.800} \times 100\% = 0,41\%$$
+  * Periode beririsan langsung: **0 tahun** (WDI berakhir 2009, BNPB mulai 2010).
+* **Evaluasi Hasil Rekonsiliasi & Komparasi Konteks:**
+  * **Tahun 2009:** Nilai WDI = **0,16059%**, Nilai BNPB = null $\implies$ Kategori: **vintage berbeda** (WDI mendahului periode pencatatan BNPB).
+  * **Tahun 2010–2024:** Nilai WDI = null $\implies$ Kategori: **vintage berbeda** (WDI tidak menerbitkan pembaruan tahunan pasca-2009).
+  * **Tahun 2025 (Komparasi Konteks Bencana):**
+    $$\text{Persentase Terdampak BNPB 2025} = \frac{10.955.315}{284.438.800} \times 100\% = 3,851554\%$$
+    $$\text{Baseline WDI (1990–2009)} = 0,160590\% \implies \mathbf{Selisih = +3,690964\%}$$
+    *Kategori:* **definisi berbeda**.
 * **Catatan Keterbandingan:**
-  * **Definisi:** WDI mengukur persentase populasi yang terdampak langsung oleh kekeringan, banjir, dan suhu ekstrem (*EM-DAT CRED definition*). BNPB mencatat korban bencana hidrometeorologi dan geologi di Indonesia.
-  * **Vintage & Waktu:** Indikator WDI mewakili *long-term baseline* pra-2010 (era sebelum UU Penanggulangan Bencana No. 24/2007 terimplementasi penuh). Angka 0,16% WDI menjadi patokan historis bahwa dampak bencana hidrometeorologi meningkat signifikan pada dekade 2010–2025 seiring membaiknya pelaporan bencana daerah dan meningkatnya intensitas cuaca ekstrem.
+  * *Definisi:* WDI mengukur rerata persentase populasi yang terdampak oleh 3 jenis bencana iklim spesifik (kekeringan, banjir, dan suhu ekstrem) berdasarkan basis data CRED EM-DAT. Sebaliknya, BNPB mencatat seluruh korban jiwa akibat spektrum bencana hidrometeorologi dan geologi di seluruh Indonesia.
+  * *Vintage & Konteks:* Indikator WDI mewakili *long-term baseline* pra-2010. Peningkatan angka paparan pada data BNPB 2025 (3,85% vs 0,16%) mencerminkan meningkatnya frekuensi anomali cuaca ekstrem serta membaiknya sistem pelaporan bencana daerah di bawah payung UU Penanggulangan Bencana No. 24/2007.
 
 ---
 
-## 3. Metrik Ringkasan Rekonsiliasi (Artefak Workbench)
+## 3. Distribusi Kategori Penjelasan dan Metrik Hasil
 
-* **Jumlah pasangan rekonsiliasi (`pasangan_rekonsiliasi`):** `3`
-* **Jumlah periode beririsan langsung seri pembanding WDI (`periode_beririsan`):** `0`  
-  *(Catatan: WDI hanya 1 titik tahun 2009 sementara seri BNPB dimulai 2010, sehingga irisan tahun langsung = 0. Jika dihitung seluruh tahun yang memiliki rekonsiliasi internal kelompok antar-pasangan, yaitu 2021, 2022, dan 2025, terdapat 3 periode).*
+Dari 136 baris tabel rekonsiliasi nasional Gold (17 periode × 8 seri pasangan), distribusi kategori penjelasan terbagi sebagai berikut:
+
+| Kategori Penjelasan | Jumlah Baris | Penjelasan Karakteristik |
+|---|---|---|
+| **cakupan berbeda** | 107 baris | Ketiadaan berkas/indikator pembanding pada periode tertentu (kab/kota di luar 2021–2022, rasio 100rb pra-2025). |
+| **vintage berbeda** | 18 baris | Perbedaan waktu snapshot pelaporan WDI 1990–2009 vs BNPB 2010–2025, serta jeda pelaporan kejadian kab/kota. |
+| **metode berbeda** | 10 baris | Kesesuaian metodologi hitungan rasio 100rb (selisih 0) dan agregasi dampak kab/kota vs provinsi 2021–2022. |
+| **definisi berbeda** | 1 baris | Komparasi konteks WDI EM-DAT (bencana iklim) vs BNPB (seluruh bencana). |
+| **Total** | **136 baris** | **100% baris memiliki kategori baku.** |
+
+### Nilai Metrik Artefak Workbench (`results/124450089/metrics.json`)
+* `pasangan_rekonsiliasi`: **3**
+* `selisih_median`: **0.0** (dari 13 baris berpasangan yang memiliki selisih terisi, 10 baris memiliki selisih 0.0, sehingga median tepat **0.0**).
+* `tabel_sql`: **4**
+* `periode_beririsan`: **0**

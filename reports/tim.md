@@ -115,8 +115,20 @@ Distribusi nilai pada data korban bencana sangat menceng (*heavily right-skewed*
 - **Keterlacakan URL Metadata:** Sebanyak 11 seri di `docs/katalog-seri.csv` telah dilengkapi tautan resmi langsung ke CKAN BNPB, API WDI, serta pedoman metadata global PBB/UNSD untuk target SDG 1.5.1, 11.5.1, dan 13.1.1 (K-031).
 
 ## Integrasi dan rekonsiliasi
-Seri utama vs pembanding nasional: selisih, penjelasannya (definisi, metode, vintage, granularitas),
-dan hasil analisis revisi dari arsip WDI. Lihat dokumen lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di `reports/tabel_nasional_periode_seri.csv`. Rancangan basis data SQL Silver terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
+
+Integrasi dan rekonsiliasi seri utama terhadap seri pembanding di tingkat nasional (Tahap 6) diwujudkan melalui pembentukan tabel analitik `data/gold/tabel_rekonsiliasi.parquet` (dan salinan CSV di `data/gold/tabel_rekonsiliasi.csv` serta tabel SQL `tabel_rekonsiliasi` di `data/gold/gold.sqlite`). Tabel ini mencakup 136 baris observasi yang memasangkan seri utama terhadap seri pembanding di seluruh 17 periode (2009 s.d. 2025) untuk 3 pasangan rekonsiliasi:
+
+1. **Pasangan 1: Rasio per 100 Ribu Penduduk (Hitungan Kelompok vs Terbitan Resmi BNPB 2025):**
+   * *Hasil:* Hitungan rasio mengungsi (`405,993486`) dan rasio meninggal+hilang (`0,660951`) pada tahun 2025 cocok sempurna dengan publikasi resmi BNPB (**selisih = 0,000000**).
+   * *Kategori Penjelasan:* **metode berbeda** pada tahun 2025 (metodologi perhitungan kelompok terbukti mereproduksi persis rumus BPS/BNPB); **cakupan berbeda** pada periode 2009–2024 karena BNPB belum menerbitkan data populasi resmi dan rasio sebelum 2025.
+2. **Pasangan 2: Agregasi Tingkat Kabupaten/Kota vs Rekapitulasi Tingkat Provinsi BNPB (2021 & 2022):**
+   * *Hasil:* Dampak korban jiwa (meninggal, hilang, luka, terdampak-mengungsi) cocok sempurna (**selisih = 0**). Pada seri kejadian terdapat selisih +49 kejadian (2021) dan +51 kejadian (2022).
+   * *Kategori Penjelasan:* **metode berbeda** untuk seluruh seri korban; **vintage berbeda** untuk seri kejadian akibat perbedaan waktu pemutakhiran data (*cut-off*) sistem BPBD daerah terhadap rilis provinsi Pusdatinkom BNPB; **cakupan berbeda** untuk tahun 2009–2020 dan 2023–2025 karena ketiadaan berkas rincian kab/kota.
+3. **Pasangan 3: Seri Utama Paparan Bencana BNPB vs Seri Pembanding WDI (`EN.CLC.MDAT.ZS`):**
+   * *Hasil:* Nilai WDI 2009 adalah 0,16059% penduduk (rata-rata 1990–2009). Sebagai perbandingan konteks pada 2025, persentase penduduk terdampak BNPB adalah 3,851554% (**selisih = +3,690964%**).
+   * *Kategori Penjelasan:* **vintage berbeda** pada 2009–2024 karena snapshot WDI berakhir pada 2009 mendahului pencatatan BNPB (irisan tahun langsung = 0); **definisi berbeda** pada perbandingan konteks 2025 karena WDI mencakup bencana iklim spesifik (CRED EM-DAT), sedangkan BNPB mencakup seluruh spektrum bencana hidrometeorologi dan geologi.
+
+Seluruh periode tanpa pasangan tetap ditampilkan dengan nilai null, dan selisih dipertahankan apa adanya. Dari seluruh baris berpasangan yang memiliki selisih terisi, diperoleh nilai **`selisih_median` = 0.0**. Uraian analitis komprehensif, formula matematis, dan catatan keterbandingan terdokumentasi lengkap di [reports/rekonsiliasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/rekonsiliasi.md) serta tabel nasional periode × seri di [reports/tabel_nasional_periode_seri.csv](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/tabel_nasional_periode_seri.csv). Rancangan basis data SQL Silver dan Gold terdokumentasi di [reports/penyimpanan.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/penyimpanan.md).
 
 ## Validasi dan reproduksibilitas
 

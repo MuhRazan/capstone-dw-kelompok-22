@@ -1,4 +1,4 @@
-"""Tahap 5: Pemuat data SQL relasional (SQLite/DuckDB) dari berkas Parquet Silver dan Gold.
+"""Tahap 5 & 6: Pemuat data SQL relasional (SQLite/DuckDB) dari berkas Parquet Silver dan Gold.
 
 Memuat 4 tabel utama:
 1. silver: dari data/silver/silver.parquet
@@ -56,8 +56,9 @@ TABEL_CONFIG = [
         "parquet": ROOT / "data" / "gold" / "tabel_rekonsiliasi.parquet",
         "kolom": [
             "pasangan_id", "nama_pasangan", "wilayah_kode", "nama_wilayah",
-            "periode", "seri_kode", "rincian", "nilai_utama", "nilai_pembanding",
-            "selisih", "satuan", "status", "catatan"
+            "periode", "seri_kode", "rincian", "nilai_seri_utama", "nilai_utama",
+            "nilai_pembanding", "selisih", "satuan", "kategori_penjelasan",
+            "kategori", "status", "catatan"
         ],
         "kunci_uji": ("pasangan_id", "wilayah_kode", "periode", "seri_kode", "rincian"),
     },
@@ -71,6 +72,10 @@ def muat_semua_ke_sqlite(db_path=SQLITE_DB):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
+
+    # Drop tabel rekonsiliasi dan view jika skema diperbarui
+    cur.execute("DROP VIEW IF EXISTS rekonsiliasi;")
+    cur.execute("DROP TABLE IF EXISTS tabel_rekonsiliasi;")
 
     # 1. Jalankan DDL
     ddl_sql = DDL_FILE.read_text(encoding="utf-8")
@@ -99,7 +104,7 @@ def muat_semua_ke_sqlite(db_path=SQLITE_DB):
 
         # Ganti NaN/NaT dengan None agar menjadi NULL di SQLite
         df_clean = df[kolom].copy()
-        df_clean = df_clean.replace({float("nan"): None, np_nan_substitute: None}) if 'np_nan_substitute' in globals() else df_clean.where(pd.notnull(df_clean), None)
+        df_clean = df_clean.where(pd.notnull(df_clean), None)
 
         data_tuples = [tuple(x) for x in df_clean.to_numpy()]
         cur.executemany(insert_sql, data_tuples)
