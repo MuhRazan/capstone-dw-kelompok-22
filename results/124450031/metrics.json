@@ -1,10 +1,10 @@
 {
   "metrik": {
-    "seri_panel": 11,
+    "seri_panel": 10,
     "rincian_dienkode": 9,
     "baris_silver": 7535,
-    "keputusan_dicatat": 20,
-    "baris_gold": 0
+    "keputusan_dicatat": 19,
+    "baris_gold": 3382
   },
   "seed": 0,
   "data_hash": "f26ed8682abbbc3496c256c56ac008f22b4bb473cd3ad9a34eb5b2f443a63b2f",
