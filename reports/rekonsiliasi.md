@@ -1,6 +1,6 @@
 # Laporan Integrasi dan Rekonsiliasi (Tahap 6 — Kasus 22: Korban Bencana)
 
-Dokumen ini memuat tabel rekonsiliasi analitik nasional Gold, perbandingan seri utama terhadap seri pembanding, analisis selisih, dan klasifikasi kategori penjelasan sesuai panduan kelompok bagian 3.
+Dokumen ini memuat tabel rekonsiliasi analitik nasional Gold, perbandingan seri utama terhadap seri pembanding, analisis selisih, klasifikasi kategori penjelasan sesuai panduan kelompok bagian 3, serta mekanisme penelusuran dinamis (*dynamic lineage tracing*) saat pipeline dijalankan ulang.
 
 ---
 
@@ -110,3 +110,45 @@ Dari 136 baris tabel rekonsiliasi nasional Gold (17 periode × 8 seri pasangan),
 * `selisih_median`: **0.0** (dari 13 baris berpasangan yang memiliki selisih terisi, 10 baris memiliki selisih 0.0, sehingga median tepat **0.0**).
 * `tabel_sql`: **4**
 * `periode_beririsan`: **0**
+
+---
+
+## 4. Penelusuran Dinamis dan Reaktivitas Pipeline (Jawaban Revisi)
+
+### A. Penelusuran Setiap Nilai Rekonsiliasi ke Tabel Nasional / Panel Gold
+Untuk menjamin tidak adanya nilai statis (*zero hardcoded numbers*), setiap komponen angka pada tabel rekonsiliasi ditelusuri langsung ke tabel analitik Gold:
+
+1. **Pasangan 1 (Rasio per 100 Ribu Penduduk):**
+   * $\text{nilai\_seri\_utama}$: Diturunkan langsung saat runtime melalui formula:
+     $$\text{calc\_mengungsi}_t = \frac{\text{df\_nat.loc}[t, \text{'korban\_mengungsi'}]}{\text{df\_nat.loc}[t, \text{'jumlah\_penduduk'}]} \times 100.000$$
+     $$\text{calc\_meninggal\_hilang}_t = \frac{\text{df\_nat.loc}[t, \text{'korban\_meninggal'}] + \text{df\_nat.loc}[t, \text{'korban\_hilang'}]}{\text{df\_nat.loc}[t, \text{'jumlah\_penduduk'}]} \times 100.000$$
+   * $\text{nilai\_pembanding}$: Diekstraksi langsung dari sel $\text{df\_nat.loc}[t, \text{'korban\_mengungsi\_per\_100rb'}]$ dan $\text{df\_nat.loc}[t, \text{'korban\_meninggal\_hilang\_per_100rb'}]$.
+   * $\text{selisih}$: Dihitung secara murni dari hasil selisih kedua objek tersebut.
+
+2. **Pasangan 2 (Agregasi Kabupaten/Kota vs Rekap Provinsi):**
+   * $\text{nilai\_pembanding}$: Diekstraksi langsung dari kolom deret waktu tabel nasional Gold $\text{df\_nat.loc}[t, \text{seri}]$.
+   * $\text{nilai\_seri\_utama}$: Diagregasikan secara dinamis melalui penjumlahan seluruh baris valid kabupaten/kota:
+     $$\text{val\_kab\_agregat}_{t, \text{seri}} = \sum \text{df\_kab}[\text{periode} = t, \text{seri\_kode} = \text{seri}][\text{'nilai\_kabupaten\_kota'}]$$
+   * $\text{selisih}$: Dihitung secara dinamis $\text{val\_kab\_agregat} - \text{val\_pembanding}$.
+
+3. **Pasangan 3 (BNPB vs WDI):**
+   * $\text{nilai\_pembanding}$: Diekstraksi langsung dari kolom $\text{df\_nat.loc}[t, \text{'EN.CLC.MDAT.ZS'}]$.
+   * $\text{nilai\_seri\_utama}$: Dihitung dinamis dari rasio paparan bencana:
+     $$\text{pct\_terdampak}_t = \frac{\text{df\_nat.loc}[t, \text{'korban\_terdampak'}]}{\text{df\_nat.loc}[t, \text{'jumlah\_penduduk'}]} \times 100$$
+   * $\text{selisih}$: Dihitung secara dinamis terhadap baseline WDI.
+
+### B. Menjamin Angka dan Kategori Otomatis Berubah saat Pipeline Dijalankan Ulang
+Reaktivitas pipeline dijamin melalui 3 mekanisme rekayasa perangkat lunak:
+1. **Rantai Dependensi Fungsional pada `pipeline.py`:**
+   Urutan eksekusi adalah:
+   $$\text{ekstraksi} \longrightarrow \text{silver} \longrightarrow \text{tabel\_nasional} \longrightarrow \text{rekonsiliasi} \longrightarrow \text{muat\_sql} \longrightarrow \text{validasi}$$
+   Modul `rekonsiliasi.py` dieksekusi **setelah** `tabel_nasional.py` selesai menuliskan data Parquet terbaru. Apabila berkas raw berubah atau data Silver dimutakhirkan, `tabel_nasional` akan menghasilkan angka agregat baru yang langsung dibaca oleh fungsi `buat_tabel_rekonsiliasi(df_nat)`.
+2. **Evaluasi Kategori Berbasis Logika Kondisional Data (Data-Driven Categories):**
+   Penetapan kategori tidak dipatok secara manual, melainkan dievaluasi dari kondisi empiris data saat runtime:
+   * Jika kedua nilai ada dan $|\text{selisih}| < 10^{-4} \implies \text{"metode berbeda"}$ (terbukti identik).
+   * Jika kedua nilai ada dan $|\text{selisih}| \ge 10^{-4}$ pada agregasi kab/kota $\implies \text{"vintage berbeda"}$ (jeda rilis).
+   * Jika kedua nilai ada pada komparasi lintas indikator WDI vs BNPB $\implies \text{"definisi berbeda"}$.
+   * Jika salah satu atau kedua nilai bernilai null $\implies \text{"cakupan berbeda"}$ atau $\text{"vintage berbeda"}$.
+   Apabila di masa depan BNPB merilis data kabupaten/kota tahun 2023 atau rasio per 100rb tahun 2024, baris tersebut secara otomatis akan bertransisi dari kategori *cakupan berbeda* menjadi baris berpasangan aktif dengan selisih yang terhitung secara instan.
+3. **Verifikasi Validasi Keras (`src/validasi/gold.py`):**
+   Aturan `selisih_konsisten` (R22) dan `berpasangan_dihitung` (R23) memeriksa bahwa $\text{selisih} \equiv \text{nilai\_seri\_utama} - \text{nilai\_pembanding}$ dengan toleransi float $< 10^{-6}$. Jika ada angka yang tidak sinkron, pipeline akan langsung gagal (*fail-fast*).
