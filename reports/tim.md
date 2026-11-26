@@ -20,14 +20,14 @@ Sebagai bagian dari Tahap 5, data analitik Kasus 22 dimuat ke dalam basis data r
    *Kunci Primer:* `(wilayah_kode, periode, seri_kode, rincian)`.
 3. **Tabel `tabel_nasional`** (90 baris): Baris agregat nasional periode × seri dengan asal angka (`baris_indonesia`, `agregat_provinsi`, `pembanding`) dan silsilah mentah.  
    *Kunci Primer:* `(periode, seri_kode)`.
-4. **Tabel `tabel_rekonsiliasi`** (1.553 baris): Pasangan rekonsiliasi analitik (Pasangan 1 rasio 100rb, Pasangan 2 agregasi kab/kota vs rekap provinsi, dan Pasangan 3 seri utama BNPB vs WDI) beserta selisih dan catatan keterbandingannya.  
+4. **Tabel `tabel_rekonsiliasi`** (136 baris): Pasangan rekonsiliasi analitik (Pasangan 1 rasio 100rb, Pasangan 2 agregasi kab/kota vs rekap provinsi, dan Pasangan 3 seri utama BNPB vs WDI) beserta selisih dan catatan keterbandingannya.  
    *Kunci Primer:* `(pasangan_id, wilayah_kode, periode, seri_kode, rincian)`.
 
 Verifikasi otomatis pada `pipeline.py` memastikan bahwa **jumlah baris di SQL sama persis (100% cocok) dengan jumlah baris Parquet Silver dan Gold**:
 * `silver`: 7.535 baris SQL == 7.535 baris Parquet.
 * `panel_gold`: 3.382 baris SQL == 3.382 baris Parquet.
 * `tabel_nasional`: 90 baris SQL == 90 baris Parquet.
-* `tabel_rekonsiliasi`: 1.553 baris SQL == 1.553 baris Parquet.
+* `tabel_rekonsiliasi`: 136 baris SQL == 136 baris Parquet.
 
 #### Alasan Pilihan Basis Data SQL (SQLite & DuckDB)
 Pemilihan SQLite (dan kompatibilitas DuckDB) didasarkan pada pertimbangan rekayasa data berikut:
