@@ -1,8 +1,0 @@
-﻿berkas,bait,sha256
-bnpb/2026-10-20/ckan/package_search-pusdatinkom-01.json,447925,a40a605ccd220c282764a7afdc09b1c5fb87cccfc30edb4e1494de2995d748fb
-bnpb/2026-10-20/datastore/data-bencana-indonesia/21044ffd-c397-4b3c-acbd-5adaa03d79e3.json,187052,d000a87575278bc036e857db512443d681195a54192ced2d044d0db7cd704a12
-bnpb/2026-10-20/datastore/data-bencana-indonesia/318f541a-5b0d-448c-8b78-9ba56c0478f2.json,14178,4bd09547ab755f2d2c7396ca5cc7cd3f74c7e5e125e69377be154dae9a2a53ca
-bnpb/2026-10-20/datastore/data-bencana-indonesia/5b9f7853-e69b-4d3a-917c-3fa3e473ed60.json,14130,7af2d161a543bfa7c8c2143bb993040185a36f887122331c481571f286e7e2a2
-bnpb/2026-10-20/datastore/data-bencana-indonesia/5dfcae7e-acb3-4548-82b5-61d876ea478a.json,16923,5d6f131c857403cf28b2e8a5da84000017bd66dbc3a7bace8f1546370b990773
-bnpb/2026-10-20/datastore/data-bencana-indonesia/69605ad2-73ea-4967-b2d5-639ad9291833.json,13890,6fd1cb7b58ff05003e312701ac73226838af58038ec9ad1cfea2f09c3c9b48c5
-bnpb/2026-10-20/datastore/data-bencana-indonesia/7f9e5218-bbba-4916-a2b8-13cf1764dc96.json,3894,860b50fd28e760e77ff4a2a7e3d21a73ef115c3bc579c44a64f81890c1182fd7
