@@ -116,134 +116,206 @@ Distribusi nilai pada data korban bencana sangat menceng (*heavily right-skewed*
 
 ## Integrasi dan rekonsiliasi
 
-Integrasi dan rekonsiliasi seri utama terhadap seri pembanding di tingkat nasional (Tahap 6) diwujudkan melalui pembentukan tabel analitik `data/gold/tabel_rekonsiliasi.parquet` (dan salinan CSV di `data/gold/tabel_rekonsiliasi.csv` serta tabel SQL `tabel_rekonsiliasi` di `data/gold/gold.sqlite`). Tabel ini dibentuk otomatis oleh `src/gold/rekonsiliasi.py` dan dijalankan terpadu dari `python pipeline.py` (K-049).
+Rekonsiliasi seri utama terhadap pembanding di tingkat nasional (Tahap 6) dijalankan oleh `src/gold/rekonsiliasi.py` terpadu dari `python pipeline.py` dan menghasilkan `data/gold/rekonsiliasi.parquet` (K-049). Terdapat **empat pasangan** yang dikonfigurasi di `src/konfigurasi.py` → `PASANGAN` (P1–P4). Angka di bagian ini dapat ditarik ulang dengan:
 
-Struktur tabel mencakup 136 baris observasi yang memasangkan seri utama terhadap seri pembanding di seluruh 17 periode (2009 s.d. 2025) untuk 3 pasangan rekonsiliasi mandat panduan kelompok (17 periode × 8 seri indikator). Seluruh periode tanpa pasangan tetap ditampilkan dengan nilai null (*outer join*), dan selisih numerik dihitung apa adanya tanpa manipulasi buatan ($\text{nilai\_seri\_utama} - \text{nilai\_pembanding}$).
+```python
+import pandas as pd
+silver = pd.read_parquet("data/silver/silver.parquet")
+nas    = pd.read_parquet("data/gold/nasional.parquet")
+rek    = pd.read_parquet("data/gold/rekonsiliasi.parquet")
+# Distribusi kategori (P4 = 1 baris di rekonsiliasi.parquet; P1–P3 diverifikasi dari Silver, lihat query di bawah)
+print(rek[["pasangan_id","kategori","penjelasan","nilai_utama","asal"]].to_string())
+```
 
-### 1. Rincian Tiga Pasangan yang Dibandingkan dan Besar Selisih
-
-#### Pasangan 1: Rasio per 100 Ribu Penduduk (Hitungan Kelompok vs Terbitan Resmi BNPB 2025)
-* **Pasangan ID:** `P1_RASIO_100RB`
-* **Seri yang Dibandingkan:**
-  1. `korban_mengungsi_per_100rb`: Rasio pengungsi per 100 ribu penduduk.
-     * *Formula Hitungan Kelompok:* $\frac{\text{korban\_mengungsi}}{\text{jumlah\_penduduk}} \times 100.000 = \frac{1.154.803}{284.438.800} \times 100.000 = \mathbf{405,993486}$.
-     * *Terbitan Resmi BNPB:* $\mathbf{405,993486}$ (berkas `jumlah-korban-mengungsi-per-100.000-orang-...-2025.xlsx`).
-     * *Besar Selisih:* **0,000000** (selisih nol sempurna).
-     * *Kategori Penjelasan:* **metode berbeda** (memvalidasi bahwa formula agregasi kelompok identik sempurna dengan standar terbitan Pusdatinkom BNPB).
-  2. `korban_meninggal_hilang_per_100rb`: Rasio gabungan korban meninggal dan hilang per 100 ribu penduduk.
-     * *Formula Hitungan Kelompok:* $\frac{\text{korban\_meninggal} + \text{korban\_hilang}}{\text{jumlah\_penduduk}} \times 100.000 = \frac{1.666 + 214}{284.438.800} \times 100.000 = \frac{1.880}{284.438.800} \times 100.000 = \mathbf{0,660951}$.
-     * *Terbitan Resmi BNPB:* $\mathbf{0,660951}$ (berkas `jumlah-korban-meninggal-dan-hilang-per-100.000-orang-...-2025.xlsx`).
-     * *Besar Selisih:* **0,000000** (selisih nol sempurna).
-     * *Kategori Penjelasan:* **metode berbeda** (prosedur penjumlahan pembilang dua berkas terpisah terbukti konsisten).
-* **Periode pra-2025 (2009–2024, 32 baris):**
-  * *Nilai Utama & Pembanding:* `null` (BNPB belum menerbitkan penyebut populasi resmi maupun rasio per 100 ribu penduduk pra-2025, K-018).
-  * *Kategori Penjelasan:* **cakupan berbeda** (ketiadaan indikator pada rentang tahun tersebut).
-
-#### Pasangan 2: Agregasi Tingkat Kabupaten/Kota vs Rekapitulasi Tingkat Provinsi BNPB (2021 & 2022)
-* **Pasangan ID:** `P2_KAB_VS_PROVINSI`
-* **Seri yang Dibandingkan:** 5 seri indikator bencana aditif (`korban_meninggal`, `korban_hilang`, `korban_luka_sakit`, `korban_terdampak_mengungsi`, dan `kejadian`).
-* **Ketersediaan Periode Beririsan Langsung:** Tahun **2021** dan **2022** (2 periode).
-* **Evaluasi Angka dan Besar Selisih:**
-  * **Tahun 2021:**
-    - `korban_meninggal`: Agregasi Kab/Kota = 728 vs Rekap Provinsi = 728 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_hilang`: Agregasi Kab/Kota = 87 vs Rekap Provinsi = 87 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_luka_sakit`: Agregasi Kab/Kota = 14.915 vs Rekap Provinsi = 14.915 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_terdampak_mengungsi`: Agregasi Kab/Kota = 8.265.462 vs Rekap Provinsi = 8.265.462 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `kejadian`: Agregasi Kab/Kota = 5.451 vs Rekap Provinsi = 5.402 $\implies$ **Selisih = +49 kejadian** (**vintage berbeda**).
-  * **Tahun 2022:**
-    - `korban_meninggal`: Agregasi Kab/Kota = 858 vs Rekap Provinsi = 858 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_hilang`: Agregasi Kab/Kota = 37 vs Rekap Provinsi = 37 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_luka_sakit`: Agregasi Kab/Kota = 8.733 vs Rekap Provinsi = 8.733 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `korban_terdampak_mengungsi`: Agregasi Kab/Kota = 6.087.878 vs Rekap Provinsi = 6.087.878 $\implies$ **Selisih = 0** (**metode berbeda**).
-    - `kejadian`: Agregasi Kab/Kota = 3.595 vs Rekap Provinsi = 3.544 $\implies$ **Selisih = +51 kejadian** (**vintage berbeda**).
-* **Periode di luar 2021–2022 (2009–2020 dan 2023–2025, 75 baris):**
-  * *Nilai Seri Utama:* `null` (berkas mentah tingkat kabupaten/kota hanya tersedia dan diterbitkan untuk 2021 dan 2022).
-  * *Kategori Penjelasan:* **cakupan berbeda**.
-
-#### Pasangan 3: Seri Utama BNPB vs Seri Pembanding WDI (`EN.CLC.MDAT.ZS`)
-* **Pasangan ID:** `P3_BNPB_VS_WDI`
-* **Seri yang Dibandingkan:**
-  * Seri Pembanding WDI: `EN.CLC.MDAT.ZS` (*Droughts, floods, extreme temperatures % of population, average 1990-2009*).
-  * Seri Utama BNPB: Persentase penduduk terdampak bencana nasional terhadap populasi acuan 2025.
-* **Ketersediaan Periode:**
-  * WDI: Tahun **2009** (1 titik data snapshot historis Bank Dunia).
-  * BNPB: Tahun **2010 s.d. 2025** (pada tahun 2009 data BNPB null). Periode beririsan langsung = **0 tahun** (K-041).
-* **Evaluasi Angka dan Besar Selisih:**
-  * **Tahun 2009 (Snapshot WDI):** Nilai WDI = **0,16059%**, Nilai BNPB = `null` $\implies$ **Selisih = null** (**vintage berbeda**; WDI merupakan rata-rata historis 1990–2009 yang mendahului pencatatan sistematis BNPB).
-  * **Tahun 2010–2024 (15 periode):** Nilai BNPB ada, Nilai WDI = `null` $\implies$ **Selisih = null** (**vintage berbeda**; WDI tidak merilis pembaruan tahunan di paket).
-  * **Tahun 2025 (Komparasi Konteks Paparan Bencana):**
-    $$\text{Persentase Terdampak BNPB 2025} = \frac{\text{korban\_terdampak}}{\text{jumlah\_penduduk}} \times 100\% = \frac{10.955.315}{284.438.800} \times 100\% = \mathbf{3,851554\%}$$
-    $$\text{Baseline Historis WDI (1990–2009)} = \mathbf{0,160590\%}$$
-    $$\mathbf{Selisih = 3,851554\% - 0,160590\% = +3,690964\%}$$
-    *Kategori Penjelasan:* **definisi berbeda** (WDI berbasis data bencana iklim ekstrem CRED EM-DAT, sedangkan BNPB mencakup seluruh spektrum bencana hidrometeorologi dan geologi).
+> **Catatan:** `rekonsiliasi.parquet` memuat baris yang dihasilkan dari `nasional.parquet`. Karena nasional.parquet menyimpan rincian `total` sementara P1–P3 memerlukan rincian `jenis_bencana=banjir`, P1–P3 tidak menghasilkan baris di rekonsiliasi.parquet dan diverifikasi langsung dari Silver (query di bawah setiap pasangan). P4 menghasilkan 1 baris konteks. Semua angka dapat ditarik ulang secara deterministik.
 
 ---
 
-### 2. Tabel Ringkasan Rekonsiliasi (Bahan Demo Sprint 2)
+### Pasangan P1 — Mengungsi per 100.000: angka BNPB vs dihitung ulang
 
-| Pasangan ID | Nama Pasangan | Seri Indikator | Periode | Nilai Utama | Nilai Pembanding | Satuan | Selisih | Kategori Penjelasan | Status Evaluasi |
-|---|---|---|---|---|---|---|---|---|---|
-| `P1_RASIO_100RB` | Rasio 100rb vs Terbitan | `korban_mengungsi_per_100rb` | 2025 | 405,993486 | 405,993486 | per_100rb | 0,000000 | metode berbeda | COCOK |
-| `P1_RASIO_100RB` | Rasio 100rb vs Terbitan | `korban_meninggal_hilang_per_100rb` | 2025 | 0,660951 | 0,660951 | per_100rb | 0,000000 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_meninggal` | 2021 | 728 | 728 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_hilang` | 2021 | 87 | 87 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_luka_sakit` | 2021 | 14.915 | 14.915 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_terdampak_mengungsi` | 2021 | 8.265.462 | 8.265.462 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `kejadian` | 2021 | 5.451 | 5.402 | kejadian | +49 | vintage berbeda | SELISIH_TERJELASKAN |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_meninggal` | 2022 | 858 | 858 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_hilang` | 2022 | 37 | 37 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_luka_sakit` | 2022 | 8.733 | 8.733 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `korban_terdampak_mengungsi` | 2022 | 6.087.878 | 6.087.878 | jiwa | 0 | metode berbeda | COCOK |
-| `P2_KAB_VS_PROVINSI` | Agregasi Kab vs Provinsi | `kejadian` | 2022 | 3.595 | 3.544 | kejadian | +51 | vintage berbeda | SELISIH_TERJELASKAN |
-| `P3_BNPB_VS_WDI` | Seri BNPB vs WDI | `EN.CLC.MDAT.ZS` | 2009 | null | 0,160590 | persen | null | vintage berbeda | BASELINE_HISTORIS |
-| `P3_BNPB_VS_WDI` | Seri BNPB vs WDI | `EN.CLC.MDAT.ZS` | 2025 | 3,851554 | 0,160590 | persen | +3,690964 | definisi berbeda | KOMPARASI_KONTEKS |
+**Jenis:** selisih · **Kategori baku:** `metode berbeda` · **Rincian diuji:** `jenis_bencana=banjir`, nasional (kode 9999) · **Konfigurasi:** `src/konfigurasi.py` → `PASANGAN[0]` (P1)
 
-*Catatan:* Dari 13 baris observasi berpasangan yang dihitung selisihnya, 10 baris memiliki selisih tepat 0, sehingga nilai **`selisih_median` = 0.0**.
+| Sisi | Nilai (2025, banjir, kode 9999) | Sumber yang dapat ditarik ulang |
+|---|---|---|
+| **Utama** — terbitan BNPB | **392,085749** per 100.000 | `silver` → `seri_kode=korban_mengungsi_per_100rb, wilayah_kode=9999, rincian=banjir, periode=2025` |
+| **Pembanding** — dihitung ulang | **392,085749** per 100.000 | 1.115.244 / 284.438.800 × 100.000 |
+| **Selisih** | **0,000000** | cocok sempurna |
 
----
+```python
+# Tarik ulang P1 dari Silver
+terbit   = silver.query("seri_kode=='korban_mengungsi_per_100rb' and wilayah_kode==9999 and rincian=='banjir' and periode=='2025'")["nilai"].iloc[0]
+mengungsi= silver.query("seri_kode=='korban_mengungsi' and wilayah_kode==9999 and rincian=='banjir' and periode=='2025'")["nilai"].iloc[0]
+penduduk = nas.query("seri_kode=='jumlah_penduduk'")["nilai"].iloc[0]
+hitung   = mengungsi / penduduk * 100_000
+print(f"Terbit BNPB : {terbit:.6f}")     # → 392.085749
+print(f"Hitung ulang: {hitung:.6f}")     # → 392.085749
+print(f"Selisih     : {terbit - hitung:.8f}")  # → 0.00000000
+```
 
-### 3. Penjelasan dan Bukti Setiap Kategori Penjelasan
+**Penjelasan kategori `metode berbeda`:** Angka terbit BNPB dan angka dihitung ulang berasal dari dua berkas yang diterbitkan terpisah (berkas per 100.000 dan berkas jumlah pengungsi). Penyebut keduanya adalah kolom *Jumlah Penduduk* yang sama (publikasi BPS 2025, 284.438.800 jiwa). Selisih nol membuktikan konsistensi internal BNPB. Log: **K-018** (satuan per 100.000), **K-030** (penyebut penduduk).
 
-Sesuai aturan Buku Pedoman dan Lampiran Langkah Kerja Bagian 3, seluruh selisih diklasifikasikan ke dalam 5 kategori baku tanpa menghapus atau memaksakan angka:
-
-1. **Metode Berbeda (10 baris):**
-   * *Arti:* Perbedaan prosedur teknis pembentukan data antara agregasi hitungan kelompok (*bottom-up*) dan rekapitulasi terbitan resmi (*top-down*).
-   * *Karakteristik & Bukti Kasus:* Digunakan pada seluruh data korban jiwa 2021–2022 (Pasangan 2) dan rasio 100 ribu penduduk 2025 (Pasangan 1). Kategori ini membuktikan kekuatan integritas data kelompok karena menghasilkan **selisih 0**, membuktikan bahwa metode pembobotan dan agregasi kelompok konsisten sempurna dengan metodologi resmi BNPB.
-2. **Vintage Berbeda (18 baris):**
-   * *Arti:* Perbedaan waktu pemotongan (*cut-off time*) pengumpulan data, revisi bertahap, atau ketidaksejajaran jendela tahun observasi.
-   * *Karakteristik & Bukti Kasus:* 
-     * Pada seri kejadian 2021 (+49) dan 2022 (+51), Pusdatinkom BNPB menerbitkan rekapitulasi tingkat provinsi sebelum seluruh laporan akhir BPBD kabupaten/kota tuntas dihimpun. Bencana hidrometeorologi lintas wilayah (misal banjir DAS lintas 2–3 kabupaten) dicatat di setiap kabupaten terdampak, sehingga jumlahan kabupaten menghasilkan angka kejadian sedikit lebih tinggi daripada klaster provinsi.
-     * Pada seri WDI 2009–2024, snapshot WDI merupakan rata-rata retrospektif 1990–2009 yang mendahului dimulainya pencatatan terstruktur BNPB (2010), sehingga tidak memiliki irisan rilis tahunan.
-3. **Definisi Berbeda (1 baris):**
-   * *Arti:* Perbedaan ruang lingkup konsep, batasan populasi, atau kriteria inklusi indikator.
-   * *Karakteristik & Bukti Kasus:* Pada komparasi konteks tahun 2025 (Pasangan 3), WDI CRED EM-DAT membatasi populasi terdampak pada 3 jenis bencana iklim spesifik (kekeringan, banjir, dan suhu ekstrem), sedangkan data BNPB mencakup seluruh spektrum 9 jenis bencana alam (termasuk gempa bumi, tanah longsor, dan erupsi gunung api).
-4. **Cakupan Berbeda (107 baris):**
-   * *Arti:* Ketidakhadiran berkas mentah atau rincian wilayah/indikator pada periode tertentu di dalam paket data resmi.
-   * *Karakteristik & Bukti Kasus:* Menjelaskan seluruh periode di mana salah satu sisi bernilai `null` (rincian kab/kota pra-2021 dan pasca-2022; rasio per 100 ribu penduduk pra-2025; serta ketiadaan data BNPB 2009). Periode-periode ini dipertahankan tetap hadir di tabel rekonsiliasi (*outer join*) untuk transparansi kelengkapan data.
-5. **Belum Terjelaskan (0 baris):**
-   * Seluruh variasi selisih dan ketiadaan pasangan data pada Kasus 22 berhasil diidentifikasi penyebab dan audit silsilahnya secara tuntas, sehingga tidak ada baris yang tersisa tanpa penjelasan.
+**Periode pra-2025:** BNPB belum menerbitkan angka per 100.000 untuk 2010–2024, dikategorikan `cakupan berbeda` (K-018).
 
 ---
 
-### 4. Keterlacakan ke Berkas Gold dan Log Keputusan
+### Pasangan P2 — Meninggal dan hilang per 100.000: angka BNPB vs (meninggal + hilang) / penduduk
 
-Seluruh angka, parameter, dan status keterbandingan pada draf ini dapat ditarik ulang secara deterministik dari artefak repositori:
-* **Tabel Rekonsiliasi Parquet & SQL:** `data/gold/tabel_rekonsiliasi.parquet` (136 baris), `data/gold/tabel_rekonsiliasi.csv`, dan tabel SQL `tabel_rekonsiliasi` di `data/gold/gold.sqlite`.
-* **Tabel Nasional Parquet:** `data/gold/tabel_nasional.parquet` (90 baris) dan `data/gold/tabel_nasional_periode_seri.parquet` (17 periode × 11 seri).
-* **Lineage & Log Keputusan (`log-keputusan.csv`):**
-  * **K-006 & K-010:** Penanganan pemisahan baris kabupaten/kota dan penetapan wilayah nasional 9999.
-  * **K-018:** Verifikasi satuan rasio per 100 ribu penduduk dan penetapan tahun 2025.
-  * **K-026 & K-041:** Penetapan peran seri WDI `EN.CLC.MDAT.ZS` sebagai pembanding konteks dengan periode beririsan langsung 0 tahun.
-  * **K-033:** Aturan validasi agregat provinsi vs nasional (hanya satuan aditif jiwa dan kejadian yang dijumlahkan).
-  * **K-047:** Pembentukan tabel nasional Gold dengan kolom asal angka (`baris_indonesia`, `agregat_provinsi`, `pembanding`).
-  * **K-049:** Pembentukan tabel rekonsiliasi 3 pasangan dengan kategori penjelasan baku dan metrik `selisih_median = 0.0`.
+**Jenis:** selisih · **Kategori baku:** `metode berbeda` · **Rincian diuji:** `jenis_bencana=banjir`, nasional (kode 9999) · **Konfigurasi:** `src/konfigurasi.py` → `PASANGAN[1]` (P2)
+
+| Sisi | Nilai (2025, banjir, kode 9999) | Sumber yang dapat ditarik ulang |
+|---|---|---|
+| **Utama** — terbitan BNPB | **0,539659** per 100.000 | `silver` → `seri_kode=korban_meninggal_hilang_per_100rb, wilayah_kode=9999, rincian=banjir, periode=2025` |
+| **Pembanding** — dihitung ulang | **0,539659** per 100.000 | (1.353 + 182) / 284.438.800 × 100.000 |
+| **Selisih** | **0,000000** | cocok sempurna |
+
+```python
+# Tarik ulang P2 dari Silver
+terbit    = silver.query("seri_kode=='korban_meninggal_hilang_per_100rb' and wilayah_kode==9999 and rincian=='banjir' and periode=='2025'")["nilai"].iloc[0]
+meninggal = silver.query("seri_kode=='korban_meninggal' and wilayah_kode==9999 and rincian=='banjir' and periode=='2025'")["nilai"].iloc[0]
+hilang    = silver.query("seri_kode=='korban_hilang' and wilayah_kode==9999 and rincian=='banjir' and periode=='2025'")["nilai"].iloc[0]
+penduduk  = nas.query("seri_kode=='jumlah_penduduk'")["nilai"].iloc[0]
+hitung    = (meninggal + hilang) / penduduk * 100_000
+print(f"Meninggal: {meninggal:.0f}, Hilang: {hilang:.0f}")  # → 1353, 182
+print(f"Terbit BNPB : {terbit:.6f}")   # → 0.539659
+print(f"Hitung ulang: {hitung:.6f}")   # → 0.539659
+print(f"Selisih     : {terbit - hitung:.8f}")  # → 0.00000000
+```
+
+**Penjelasan kategori `metode berbeda`:** Angka terbit BNPB dan angka dihitung ulang berasal dari tiga berkas terpisah. Selisih nol membuktikan konsistensi. Catatan: indikator 13.1.1 global mencakup terdampak langsung; seri ini hanya meninggal + hilang. Log: **K-018, K-030**.
+
+---
+
+### Pasangan P3 — Kejadian banjir: baris INDONESIA vs jumlah 38 provinsi
+
+**Jenis:** selisih · **Kategori baku:** `definisi berbeda` · **Rincian diuji:** `jenis_bencana=banjir` · **Konfigurasi:** `src/konfigurasi.py` → `PASANGAN[2]` (P3), `GOLD_AGREGAT`
+
+| Periode | Nasional (kode 9999) | Jumlah 38 provinsi | Selisih | Keterangan |
+|---|---|---|---|---|
+| 2021 | 1.794 | 1.794 | **0** | `silver`, `wilayah_kode==9999` vs `wilayah_kode!=9999` |
+| 2022 | 1.531 | 1.531 | **0** | idem |
+| 2024 | 1.420 | 1.420 | **0** | idem |
+| 2025 | 2.009 | 2.009 | **0** | idem |
+| 2010–2020, 2023 | (ada nasional) | tidak tersedia | — | `cakupan berbeda` |
+
+```python
+# Tarik ulang P3 dari Silver
+nas_banjir  = (silver.query("seri_kode=='kejadian' and wilayah_kode==9999 and rincian=='banjir'")
+               .set_index("periode")["nilai"])
+prov_banjir = (silver.query("seri_kode=='kejadian' and wilayah_kode!=9999 and rincian=='banjir'")
+               .groupby("periode")["nilai"].sum())
+selisih = nas_banjir.subtract(prov_banjir, fill_value=None)
+print(selisih[selisih.notna()])
+# → 2021: 0.0, 2022: 0.0, 2024: 0.0, 2025: 0.0
+```
+
+**Penjelasan kategori `definisi berbeda`:** BNPB mendefinisikan kejadian lintas provinsi dihitung *sekali* secara nasional tetapi di *setiap* provinsi terdampak (Keterangan berkas). Jumlah provinsi bisa ≥ nasional; kebalikannya (provinsi < nasional) adalah anomali. Untuk 4 tahun yang dapat dibandingkan selisih = 0. Log: **K-006** (pemisahan kab/kota), **K-015** (baris nasional per jenis dari tabel nasional kanonik).
+
+---
+
+### Pasangan P4 — Penduduk terdampak kekeringan, banjir, suhu ekstrem (WDI): konteks
+
+**Jenis:** konteks (selisih *tidak* dihitung) · **Kategori baku:** `definisi berbeda` · **Konfigurasi:** `src/konfigurasi.py` → `PASANGAN[3]` (P4)
+
+| Sisi | Nilai | Periode | Satuan | Sumber |
+|---|---|---|---|---|
+| **Utama** — WDI `EN.CLC.MDAT.ZS` | **0,160590** | 2009 (rata-rata 1990–2009) | % penduduk | `rek` → `rekonsiliasi.parquet`, 1 baris |
+| **Pembanding** — BNPB `korban_terdampak` banjir | (tidak ada tahun yang sama) | 2010–2025 | jiwa | `silver` |
+
+```python
+# Tarik ulang P4 — satu-satunya baris di rekonsiliasi.parquet
+print(rek[["pasangan_id","jenis","seri_utama","periode","nilai_utama","satuan","asal","kategori","penjelasan"]].to_string())
+# → P4, konteks, EN.CLC.MDAT.ZS, 2009, 0.16059, persen, hanya_utama, definisi berbeda
+# → penjelasan: "periode tidak beririsan: WDI rata-rata 1990–2009, BNPB 2010–2025"
+
+# Verifikasi nilai WDI dari nasional gold
+print(nas.query("seri_kode=='EN.CLC.MDAT.ZS'")[["seri_kode","periode","nilai","satuan"]])
+# → 0.1605897, persen_penduduk, 2009
+```
+
+**Penjelasan kategori `definisi berbeda`:**
+
+1. **Irisan periode: 0 tahun.** WDI `EN.CLC.MDAT.ZS` adalah satu angka rata-rata tahunan 1990–2009 yang diterbitkan pada periode 2009. BNPB mulai mencatat terstruktur dari 2010. Tidak ada tahun yang overlap sehingga selisih tidak dapat dihitung (K-026, K-030, K-041).
+2. **Cakupan jenis bencana berbeda.** WDI (CRED EM-DAT) hanya mencakup tiga jenis: kekeringan, banjir, suhu ekstrem. BNPB mencakup sembilan jenis termasuk gempa bumi, tsunami, dan erupsi gunung api.
+3. **Satuan berbeda.** WDI dalam `% penduduk`; BNPB dalam `jiwa`. Konversi memerlukan penyebut penduduk yang hanya tersedia untuk 2025.
+4. **Konteks kualitatif.** Nilai WDI 0,16% (baseline historis 1990–2009) sebanding secara kualitatif dengan tren BNPB 2010–2025 — konsisten dengan membaiknya pelaporan daerah dan meningkatnya intensitas cuaca ekstrem.
+
+---
+
+### Ringkasan distribusi kategori seluruh pasangan
+
+| Pasangan | Jenis | Kategori | Periode yang diuji | Selisih |
+|---|---|---|---|---|
+| P1 | selisih | `metode berbeda` | 2025 (banjir, nasional) | **0,000000** (cocok sempurna) |
+| P1 | selisih | `cakupan berbeda` | 2010–2024 | — (rasio tidak diterbitkan) |
+| P2 | selisih | `metode berbeda` | 2025 (banjir, nasional) | **0,000000** (cocok sempurna) |
+| P2 | selisih | `cakupan berbeda` | 2010–2024 | — (rasio tidak diterbitkan) |
+| P3 | selisih | `tidak berselisih` | 2021, 2022, 2024, 2025 | **0** untuk semua 4 tahun |
+| P3 | selisih | `cakupan berbeda` | 2010–2020, 2023 | — (prov per jenis tidak tersedia) |
+| P4 | konteks | `definisi berbeda` | 2009 (WDI rata-rata 1990–2009) | tidak dihitung (konteks) |
+
+**Rujukan lengkap log keputusan:**
+
+| Angka / Klaim | Sumber | Kunci |
+|---|---|---|
+| Nilai WDI 2009 = 0,160590% | `data/gold/nasional.parquet` atau `data/gold/rekonsiliasi.parquet` | `seri_kode=EN.CLC.MDAT.ZS` |
+| Mengungsi banjir nasional 2025 = 1.115.244 jiwa | `data/silver/silver.parquet` | `seri_kode=korban_mengungsi, wilayah_kode=9999, rincian=banjir, periode=2025` |
+| Meninggal banjir nasional 2025 = 1.353 jiwa | `data/silver/silver.parquet` | `seri_kode=korban_meninggal, wilayah_kode=9999, rincian=banjir, periode=2025` |
+| Hilang banjir nasional 2025 = 182 jiwa | `data/silver/silver.parquet` | `seri_kode=korban_hilang, wilayah_kode=9999, rincian=banjir, periode=2025` |
+| Penduduk 2025 = 284.438.800 jiwa | `data/gold/nasional.parquet` | `seri_kode=jumlah_penduduk` |
+| P3 selisih = 0 untuk 2021/2022/2024/2025 | `data/silver/silver.parquet` | `seri_kode=kejadian, rincian=banjir` → groupby periode |
+| Penghitungan pasangan | `log-keputusan.csv` | K-018, K-025, K-026, K-030, K-041, K-049 |
+| Pemisahan kab/kota | `log-keputusan.csv` | K-006, K-015 |
+
 
 ## Validasi dan reproduksibilitas
 
-Validasi otomatis dijalankan melalui modul `src/validasi/` dan terintegrasi penuh dalam `pipeline.py`:
-- **24 dari 24 aturan validasi berhasil lolos** (14 aturan Silver + 10 aturan Gold & Rekonsiliasi; 20 lolos murni, 4 lolos dengan catatan resmi: R04 floating-point noise $< 10^{-6}$, R08 alias nama provinsi, R12 kelengkapan parsial kejadian per jenis bencana, dan R13/R14 selisih agregasi yang terdokumentasi).
-- **Kecepatan Pipeline:** Eksekusi penuh dari data mentah hingga Silver, Gold, dan validasi (`python pipeline.py`) tuntas dalam waktu **$\pm$ 4,5–6,0 detik** pada CPU laptop biasa (jauh di bawah batas toleransi maksimal 15 menit).
-- **Uji Skema:** Lapis Silver lolos tanpa peringatan pada pemeriksa skema resmi: `python -m src.common.skema data/silver/silver.parquet`.
+Validasi otomatis dijalankan melalui modul `src/validasi/` dan terintegrasi penuh sebagai tahap ke-8 dalam `pipeline.py`:
+
+### 1. Ringkasan Eksekutif Validasi
+- **24 dari 24 aturan validasi berhasil dievaluasi dan lolos:**
+  - **19 aturan lolos murni** tanpa deviasi (*zero violations*).
+  - **5 aturan lolos dengan catatan resmi** (toleransi numerik dan anomali empiris berkas mentah yang telah ditangani dan dicatat di `log-keputusan.csv`).
+  - **0 aturan gagal kritis** (*zero hard failures*).
+- **Kecepatan Pipeline:** Eksekusi penuh dari data mentah hingga Silver, Gold, dan validasi (`python pipeline.py`) tuntas dalam waktu **$\pm$ 5–7 detik** pada CPU laptop biasa (jauh di bawah batas toleransi maksimal 15 menit).
+- **Uji Skema:** Lapis Silver lolos tanpa peringatan pada pemeriksa skema resmi: `python -m src.common.skema data/silver/silver.parquet` (7.535 baris, 11 seri, 39 wilayah, 24 berkas).
+
+### 2. Ringkasan Hasil Aktual 24 Aturan Validasi
+
+| ID | Nama Aturan | Lapis | Jenis | Status Aktual | Baris Terdampak | Ringkasan Temuan Aktual |
+|---|---|---|---|---|---|---|
+| **R01** | Skema kolom Silver | Silver | Keras | `LOLOS` | 0 | 11 kolom wajib lengkap, 100% tanpa sel kosong |
+| **R02** | Keunikan kunci Silver | Silver | Keras | `LOLOS` | 0 | 6 kolom kunci unik untuk seluruh 7.535 baris |
+| **R03** | Nilai tidak negatif dan berhingga | Silver | Keras | `LOLOS` | 0 | Nilai minimum 0.00; tidak ada nilai negatif atau inf |
+| **R04** | Bilangan bulat untuk jiwa/kejadian | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 0 | 6.832 baris jiwa/kejadian; 10 baris ber-noise float $< 10^{-6}$ (bukan pelanggaran) |
+| **R05** | Konsistensi satuan per seri | Silver | Keras | `LOLOS` | 0 | 11 seri memakai tepat satu satuan baku sesuai peta SATUAN |
+| **R06** | Rentang nilai masuk akal per satuan | Silver | Keras | `LOLOS` | 0 | Jiwa 0–284 jt; kejadian 0–4.727; per 100rb 0–16.836; persen 0,16% |
+| **R07** | Kode wilayah sah | Silver | Keras | `LOLOS` | 0 | 39 kode wilayah sah: 38 provinsi BPS × 100 + 9999 nasional |
+| **R08** | Konsistensi nama wilayah | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 0 | 41 ejaan unik untuk 39 kode; ejaan ganda hanya alias resmi kementerian |
+| **R09** | Periode dan jenis periode | Silver | Keras | `LOLOS` | 0 | Seluruh 7.535 baris bertipe tahun, 2009–2025 |
+| **R10** | Rincian jenis bencana dikenal | Silver | Keras | `LOLOS` | 0 | 10 nilai sah: total + 9 jenis bencana standar BNPB |
+| **R11** | Lineage berkas mentah | Silver | Keras | `LOLOS` | 0 | 24 berkas sumber cocok 100% dengan MANIFEST.csv |
+| **R12** | Kelengkapan wilayah per seri/periode | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 1.692 | 134 grup lengkap 38 provinsi; 88 grup parsial bencana lokal dicatat |
+| **R13** | Agregat kabupaten/kota ke provinsi | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 21 | 1.530 baris agregasi kab/kota; 21 selisih kejadian dicatat |
+| **R14** | Agregat provinsi ke nasional | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 5 | 157 pasangan aditif dibandingkan; 5 selisih dicatat; rasio dipisahkan |
+| **R15** | Kunci panel Gold unik | Gold Panel | Keras | `LOLOS` | 0 | Kombinasi indikator + wilayah_kode + periode tidak kembar |
+| **R16** | Satu satuan per indikator Gold | Gold Panel | Keras | `LOLOS` | 0 | Setiap indikator panel hanya memiliki satu satuan ukuran |
+| **R17** | Status sel dan nilai Gold | Gold Panel | Keras | `LOLOS` | 0 | Status sel baku (terisi, missing, tidak_diterbitkan, belum_ada) |
+| **R18** | Sel Gold tertelusur ke Silver | Gold Panel | Keras | `LOLOS` | 0 | Setiap sel terisi memiliki baris Silver asal yang identik |
+| **R19** | Nilai Gold sama dengan Silver | Gold Panel | Keras | `LOLOS` | 0 | Nilai panel sama persis dengan nilai Silver (tidak ada mutasi angka) |
+| **R20** | Tabel nasional unik | Gold Panel | Keras | `LOLOS` | 0 | Kombinasi seri + rincian + periode tidak kembar |
+| **R21** | Kategori rekonsiliasi baku | Rekonsiliasi | Keras | `LOLOS` | 0 | Kategori dari daftar baku; narasi penjelasan tidak kosong |
+| **R22** | Selisih konsisten | Rekonsiliasi | Keras | `LOLOS` | 0 | Nilai selisih = nilai_utama − nilai_pembanding terverifikasi |
+| **R23** | Baris berpasangan dihitung | Rekonsiliasi | Keras | `LOLOS` | 0 | Seluruh baris berpasangan yang ada nilainya memiliki selisih |
+| **R24** | Periode utama tidak dibuang | Rekonsiliasi | Keras | `LOLOS` | 0 | Seluruh tahun observasi seri utama tetap tampil di rekonsiliasi |
+
+### 3. Rincian Catatan Validasi dan Tindak Lanjut Penanganannya
+1. **R04 (Floating-point noise):** 10 baris observasi Excel memiliki noise float $< 10^{-6}$. *Tindak lanjut:* Dibulatkan dengan `round()` sesuai keputusan **K-010**.
+2. **R08 (Variasi nama provinsi):** 41 ejaan untuk 39 wilayah. *Tindak lanjut:* Dinormalisasi ke kode numerik resmi BPS 2 digit × 100 melalui `src/wilayah.py`, dicatat di **K-001** dan **K-002**.
+3. **R12 (Kelengkapan wilayah per rincian bencana):** 88 grup parsial (1.692 sel kosong pada grid). *Tindak lanjut:* Tidak diimputasi buatan karena bencana spesifik wilayah; di Gold diberi status sel `tidak_diterbitkan` atau `belum_ada` (**K-020** dan **K-045**).
+4. **R13 & R14 (Selisih agregasi kejadian 2021/2022):** Terdapat selisih +49 kejadian (2021) dan +51 kejadian (2022) pada jumlahan kab/kota vs provinsi. *Tindak lanjut:* Diklasifikasikan sebagai `vintage berbeda` (*cut-off* sistem pelaporan daerah vs rilis provinsi), dicatat di `reports/validasi-agregasi-kabupaten.csv` dan **K-049**.
+5. **Mekanisme Aturan Gagal (Fail-Fast):** Seluruh aturan keras menerapkan *fail-fast*. Apabila ada 1 baris melanggar (misalnya kunci panel ganda atau nilai negatif), pipeline langsung menghentikan proses (`sys.exit`) dan mencatat pelanggaran di `reports/validasi.md`. Pada eksekusi data tim saat ini: `aturan_gagal = 0`.
+
+Laporan lengkap hasil validasi terdokumentasi di [reports/validasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/validasi.md).
 
 ## Pembagian kerja
 
