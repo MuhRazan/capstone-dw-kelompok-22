@@ -240,10 +240,53 @@ Seluruh angka, parameter, dan status keterbandingan pada draf ini dapat ditarik 
 
 ## Validasi dan reproduksibilitas
 
-Validasi otomatis dijalankan melalui modul `src/validasi/` dan terintegrasi penuh dalam `pipeline.py`:
-- **24 dari 24 aturan validasi berhasil lolos** (14 aturan Silver + 10 aturan Gold & Rekonsiliasi; 20 lolos murni, 4 lolos dengan catatan resmi: R04 floating-point noise $< 10^{-6}$, R08 alias nama provinsi, R12 kelengkapan parsial kejadian per jenis bencana, dan R13/R14 selisih agregasi yang terdokumentasi).
-- **Kecepatan Pipeline:** Eksekusi penuh dari data mentah hingga Silver, Gold, dan validasi (`python pipeline.py`) tuntas dalam waktu **$\pm$ 4,5–6,0 detik** pada CPU laptop biasa (jauh di bawah batas toleransi maksimal 15 menit).
-- **Uji Skema:** Lapis Silver lolos tanpa peringatan pada pemeriksa skema resmi: `python -m src.common.skema data/silver/silver.parquet`.
+Validasi otomatis dijalankan melalui modul `src/validasi/` dan terintegrasi penuh sebagai tahap ke-8 dalam `pipeline.py`:
+
+### 1. Ringkasan Eksekutif Validasi
+- **24 dari 24 aturan validasi berhasil dievaluasi dan lolos:**
+  - **19 aturan lolos murni** tanpa deviasi (*zero violations*).
+  - **5 aturan lolos dengan catatan resmi** (toleransi numerik dan anomali empiris berkas mentah yang telah ditangani dan dicatat di `log-keputusan.csv`).
+  - **0 aturan gagal kritis** (*zero hard failures*).
+- **Kecepatan Pipeline:** Eksekusi penuh dari data mentah hingga Silver, Gold, dan validasi (`python pipeline.py`) tuntas dalam waktu **$\pm$ 5–7 detik** pada CPU laptop biasa (jauh di bawah batas toleransi maksimal 15 menit).
+- **Uji Skema:** Lapis Silver lolos tanpa peringatan pada pemeriksa skema resmi: `python -m src.common.skema data/silver/silver.parquet` (7.535 baris, 11 seri, 39 wilayah, 24 berkas).
+
+### 2. Ringkasan Hasil Aktual 24 Aturan Validasi
+
+| ID | Nama Aturan | Lapis | Jenis | Status Aktual | Baris Terdampak | Ringkasan Temuan Aktual |
+|---|---|---|---|---|---|---|
+| **R01** | Skema kolom Silver | Silver | Keras | `LOLOS` | 0 | 11 kolom wajib lengkap, 100% tanpa sel kosong |
+| **R02** | Keunikan kunci Silver | Silver | Keras | `LOLOS` | 0 | 6 kolom kunci unik untuk seluruh 7.535 baris |
+| **R03** | Nilai tidak negatif dan berhingga | Silver | Keras | `LOLOS` | 0 | Nilai minimum 0.00; tidak ada nilai negatif atau inf |
+| **R04** | Bilangan bulat untuk jiwa/kejadian | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 0 | 6.832 baris jiwa/kejadian; 10 baris ber-noise float $< 10^{-6}$ (bukan pelanggaran) |
+| **R05** | Konsistensi satuan per seri | Silver | Keras | `LOLOS` | 0 | 11 seri memakai tepat satu satuan baku sesuai peta SATUAN |
+| **R06** | Rentang nilai masuk akal per satuan | Silver | Keras | `LOLOS` | 0 | Jiwa 0–284 jt; kejadian 0–4.727; per 100rb 0–16.836; persen 0,16% |
+| **R07** | Kode wilayah sah | Silver | Keras | `LOLOS` | 0 | 39 kode wilayah sah: 38 provinsi BPS × 100 + 9999 nasional |
+| **R08** | Konsistensi nama wilayah | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 0 | 41 ejaan unik untuk 39 kode; ejaan ganda hanya alias resmi kementerian |
+| **R09** | Periode dan jenis periode | Silver | Keras | `LOLOS` | 0 | Seluruh 7.535 baris bertipe tahun, 2009–2025 |
+| **R10** | Rincian jenis bencana dikenal | Silver | Keras | `LOLOS` | 0 | 10 nilai sah: total + 9 jenis bencana standar BNPB |
+| **R11** | Lineage berkas mentah | Silver | Keras | `LOLOS` | 0 | 24 berkas sumber cocok 100% dengan MANIFEST.csv |
+| **R12** | Kelengkapan wilayah per seri/periode | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 1.692 | 134 grup lengkap 38 provinsi; 88 grup parsial bencana lokal dicatat |
+| **R13** | Agregat kabupaten/kota ke provinsi | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 21 | 1.530 baris agregasi kab/kota; 21 selisih kejadian dicatat |
+| **R14** | Agregat provinsi ke nasional | Silver | Peringatan | `LOLOS_DENGAN_CATATAN` | 5 | 157 pasangan aditif dibandingkan; 5 selisih dicatat; rasio dipisahkan |
+| **R15** | Kunci panel Gold unik | Gold Panel | Keras | `LOLOS` | 0 | Kombinasi indikator + wilayah_kode + periode tidak kembar |
+| **R16** | Satu satuan per indikator Gold | Gold Panel | Keras | `LOLOS` | 0 | Setiap indikator panel hanya memiliki satu satuan ukuran |
+| **R17** | Status sel dan nilai Gold | Gold Panel | Keras | `LOLOS` | 0 | Status sel baku (terisi, missing, tidak_diterbitkan, belum_ada) |
+| **R18** | Sel Gold tertelusur ke Silver | Gold Panel | Keras | `LOLOS` | 0 | Setiap sel terisi memiliki baris Silver asal yang identik |
+| **R19** | Nilai Gold sama dengan Silver | Gold Panel | Keras | `LOLOS` | 0 | Nilai panel sama persis dengan nilai Silver (tidak ada mutasi angka) |
+| **R20** | Tabel nasional unik | Gold Panel | Keras | `LOLOS` | 0 | Kombinasi seri + rincian + periode tidak kembar |
+| **R21** | Kategori rekonsiliasi baku | Rekonsiliasi | Keras | `LOLOS` | 0 | Kategori dari daftar baku; narasi penjelasan tidak kosong |
+| **R22** | Selisih konsisten | Rekonsiliasi | Keras | `LOLOS` | 0 | Nilai selisih = nilai_utama − nilai_pembanding terverifikasi |
+| **R23** | Baris berpasangan dihitung | Rekonsiliasi | Keras | `LOLOS` | 0 | Seluruh baris berpasangan yang ada nilainya memiliki selisih |
+| **R24** | Periode utama tidak dibuang | Rekonsiliasi | Keras | `LOLOS` | 0 | Seluruh tahun observasi seri utama tetap tampil di rekonsiliasi |
+
+### 3. Rincian Catatan Validasi dan Tindak Lanjut Penanganannya
+1. **R04 (Floating-point noise):** 10 baris observasi Excel memiliki noise float $< 10^{-6}$. *Tindak lanjut:* Dibulatkan dengan `round()` sesuai keputusan **K-010**.
+2. **R08 (Variasi nama provinsi):** 41 ejaan untuk 39 wilayah. *Tindak lanjut:* Dinormalisasi ke kode numerik resmi BPS 2 digit × 100 melalui `src/wilayah.py`, dicatat di **K-001** dan **K-002**.
+3. **R12 (Kelengkapan wilayah per rincian bencana):** 88 grup parsial (1.692 sel kosong pada grid). *Tindak lanjut:* Tidak diimputasi buatan karena bencana spesifik wilayah; di Gold diberi status sel `tidak_diterbitkan` atau `belum_ada` (**K-020** dan **K-045**).
+4. **R13 & R14 (Selisih agregasi kejadian 2021/2022):** Terdapat selisih +49 kejadian (2021) dan +51 kejadian (2022) pada jumlahan kab/kota vs provinsi. *Tindak lanjut:* Diklasifikasikan sebagai `vintage berbeda` (*cut-off* sistem pelaporan daerah vs rilis provinsi), dicatat di `reports/validasi-agregasi-kabupaten.csv` dan **K-049**.
+5. **Mekanisme Aturan Gagal (Fail-Fast):** Seluruh aturan keras menerapkan *fail-fast*. Apabila ada 1 baris melanggar (misalnya kunci panel ganda atau nilai negatif), pipeline langsung menghentikan proses (`sys.exit`) dan mencatat pelanggaran di `reports/validasi.md`. Pada eksekusi data tim saat ini: `aturan_gagal = 0`.
+
+Laporan lengkap hasil validasi terdokumentasi di [reports/validasi.md](file:///c:/Users/HP/workbench-workspace/capstone-data-wrangling/reports/validasi.md).
 
 ## Pembagian kerja
 
