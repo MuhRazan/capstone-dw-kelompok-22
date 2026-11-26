@@ -1,9 +1,0 @@
-## 5dfcae7e-acb3-4548-82b5-61d876ea478a.json | tipe: dict
-  kunci 'resource_id' -> str (len=36) '5dfcae7e-acb3-4548-82b5-61d876ea478a'
-  kunci 'halaman' -> list (len=1) [{'help': 'https://data.bnpb.go.id/api/3/action/help_show?name=datastore_search', 'success': True, 'result': {'include_total': True, 'limit': 32000, 'offset': 0, 'records_format': 'objects', 'resource_id': '5dfcae7e-acb3-4548-82b5-61d876ea478a', 'total_estimation_threshold': None, 'records': [{'_id'
-## 69605ad2-73ea-4967-b2d5-639ad9291833.json | tipe: dict
-  kunci 'resource_id' -> str (len=36) '69605ad2-73ea-4967-b2d5-639ad9291833'
-  kunci 'halaman' -> list (len=1) [{'help': 'https://data.bnpb.go.id/api/3/action/help_show?name=datastore_search', 'success': True, 'result': {'include_total': True, 'limit': 32000, 'offset': 0, 'records_format': 'objects', 'resource_id': '69605ad2-73ea-4967-b2d5-639ad9291833', 'total_estimation_threshold': None, 'records': [{'_id'
-## f345ba43-99aa-428c-82d8-4b6a0bba380e.json | tipe: dict
-  kunci 'resource_id' -> str (len=36) 'f345ba43-99aa-428c-82d8-4b6a0bba380e'
-  kunci 'halaman' -> list (len=1) [{'help': 'https://data.bnpb.go.id/api/3/action/help_show?name=datastore_search', 'success': True, 'result': {'include_total': True, 'limit': 32000, 'offset': 0, 'records_format': 'objects', 'resource_id': 'f345ba43-99aa-428c-82d8-4b6a0bba380e', 'total_estimation_threshold': None, 'records': [{'_id'
