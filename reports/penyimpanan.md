@@ -100,7 +100,7 @@ Seluruh tabel dimuat secara otomatis saat `python pipeline.py` dijalankan melalu
 | `silver` | `data/silver/silver.parquet` | 7.535 | 7.535 | **100% Cocok** | `(sumber, seri_kode, wilayah_kode, periode, rincian, _berkas_raw)` |
 | `panel_gold` | `data/gold/panel.parquet` | 3.382 | 3.382 | **100% Cocok** | `(wilayah_kode, periode, seri_kode, rincian)` |
 | `tabel_nasional` | `data/gold/tabel_nasional.parquet` | 90 | 90 | **100% Cocok** | `(periode, seri_kode)` |
-| `tabel_rekonsiliasi` | `data/gold/tabel_rekonsiliasi.parquet` | 1.553 | 1.553 | **100% Cocok** | `(pasangan_id, wilayah_kode, periode, seri_kode, rincian)` |
+| `tabel_rekonsiliasi` | `data/gold/tabel_rekonsiliasi.parquet` | 136 | 136 | **100% Cocok** | `(pasangan_id, wilayah_kode, periode, seri_kode, rincian)` |
 
 Setiap tabel melewati uji integritas *Primary Key* dengan memastikan penolakan otomatis (`sqlite3.IntegrityError`) saat baris kembar dicoba dimasukkan.
 
